@@ -15,6 +15,7 @@ interface HeaderProps {
   themeMode: ThemeMode;
   onToggleTheme: () => void;
   hasLastCommand: boolean;
+  modeChangeDisabled?: boolean;
 }
 
 export function Header({
@@ -28,6 +29,7 @@ export function Header({
   themeMode,
   onToggleTheme,
   hasLastCommand,
+  modeChangeDisabled = false,
 }: HeaderProps) {
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -74,12 +76,14 @@ export function Header({
           <button
             className={`${styles.modeButton} ${mode === 'playground' ? styles.activeMode : ''}`}
             onClick={() => onModeChange('playground')}
+            disabled={modeChangeDisabled}
           >
             Playground
           </button>
           <button
             className={`${styles.modeButton} ${mode === 'explainer' ? styles.activeMode : ''}`}
             onClick={() => onModeChange('explainer')}
+            disabled={modeChangeDisabled}
           >
             Explainer
           </button>
@@ -105,7 +109,7 @@ export function Header({
       </div>
 
       <div className={styles.rightGroup}>
-        {hasLastCommand && (
+        {mode === 'playground' && hasLastCommand && (
           <button
             className={styles.headerBtn}
             onClick={onExplainLast}
@@ -115,17 +119,21 @@ export function Header({
           </button>
         )}
 
-        <button
-          className={styles.headerBtn}
-          onClick={handleShareClick}
-          title="Copy shareable link with command history"
-        >
-          {copySuccess ? '✓ Link Copied!' : '🔗 Share'}
-        </button>
+        {mode === 'playground' && (
+          <>
+            <button
+              className={styles.headerBtn}
+              onClick={handleShareClick}
+              title="Copy shareable link with command history"
+            >
+              {copySuccess ? '✓ Link Copied!' : '🔗 Share'}
+            </button>
 
-        <button className={styles.headerBtn} onClick={onReset} title="Reset playground to empty repository">
-          ↻ Reset
-        </button>
+            <button className={styles.headerBtn} onClick={onReset} title="Reset playground to empty repository">
+              ↻ Reset
+            </button>
+          </>
+        )}
 
         <button
           className={`${styles.headerBtn} ${styles.themeBtn}`}

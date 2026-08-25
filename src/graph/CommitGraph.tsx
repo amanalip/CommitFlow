@@ -31,9 +31,15 @@ interface CommitGraphProps {
   commits: CommitInfo[];
   onSelectCommit?: (commit: CommitInfo) => void;
   isDark?: boolean;
+  graphId?: string;
 }
 
-function InnerCommitGraph({ commits, onSelectCommit, isDark = true }: CommitGraphProps) {
+function InnerCommitGraph({
+  commits,
+  onSelectCommit,
+  isDark = true,
+  graphId = 'commitflow-graph-container',
+}: CommitGraphProps) {
   const { fitView, zoomIn, zoomOut } = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
@@ -54,7 +60,7 @@ function InnerCommitGraph({ commits, onSelectCommit, isDark = true }: CommitGrap
 
   const handleExportPng = async () => {
     try {
-      await exportGraphToPng('commitflow-graph-container');
+      await exportGraphToPng(graphId, isDark ? '#0f172a' : '#f8fafc');
     } catch {
       // Ignore
     }
@@ -62,14 +68,14 @@ function InnerCommitGraph({ commits, onSelectCommit, isDark = true }: CommitGrap
 
   const handleExportSvg = async () => {
     try {
-      await exportGraphToSvg('commitflow-graph-container');
+      await exportGraphToSvg(graphId, isDark ? '#0f172a' : '#f8fafc');
     } catch {
       // Ignore
     }
   };
 
   return (
-    <div id="commitflow-graph-container" className={styles.graphContainer}>
+    <div id={graphId} className={styles.graphContainer}>
       <div className={styles.graphControls}>
         <button
           className={styles.controlButton}

@@ -1,63 +1,91 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { RepoState } from '../../model/types';
 import { gitBridge } from '../../engine/git-bridge';
 import { executeCommandLine } from '../../parser/command-map';
 import { CommitGraph } from '../../graph/CommitGraph';
+import { EXPLAINER_PRESETS, getExplainerSetup } from './explainer-fixtures';
 import styles from './ExplainerMode.module.css';
 
 interface ExplainerModeProps {
   isDark?: boolean;
+  onProcessingChange?: (isProcessing: boolean) => void;
 }
 
-const PRESET_COMMANDS = [
-  'git checkout -b feature/auth',
-  'git commit -m "feat: implement login"',
-  'git merge feature/auth',
-  'git rebase main',
-  'git reset --soft HEAD~1',
-  'git revert HEAD',
-  'git tag v1.0.0',
-];
+const stripAnsi = (value: string) => value.replace(/\x1b\[[0-9;]*m/g, '');
 
-export function ExplainerMode({ isDark = true }: ExplainerModeProps) {
+export function ExplainerMode({ isDark = true, onProcessingChange }: ExplainerModeProps) {
   const [inputCommand, setInputCommand] = useState<string>('git checkout -b feature/auth');
   const [beforeState, setBeforeState] = useState<RepoState | null>(null);
   const [afterState, setAfterState] = useState<RepoState | null>(null);
   const [explanation, setExplanation] = useState<string>('');
+  const [error, setError] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const processingRef = useRef(false);
+  const hasRunInitial = useRef(false);
+  const requestIdRef = useRef(0);
 
-  const setupBaseRepo = useCallback(async () => {
-    await gitBridge.send('RESET_REPO');
-    await executeCommandLine('git init');
-    await executeCommandLine('touch index.html');
-    await executeCommandLine('echo "<h1>Base App</h1>" > index.html');
-    await executeCommandLine('git add index.html');
-    await executeCommandLine('git commit -m "feat: initial commit"');
-    await executeCommandLine('touch styles.css');
-    await executeCommandLine('echo "body { margin: 0; }" > styles.css');
-    await executeCommandLine('git add styles.css');
-    await executeCommandLine('git commit -m "style: add base styles"');
+  const setupBaseRepo = useCallback(async (command: string) => {
+    for (const setupCommand of getExplainerSetup(command)) {
+      const result = await executeCommandLine(setupCommand);
+      if (result.exitCode !== 0) {
+        throw new Error(stripAnsi(result.stderr || `Setup failed: ${setupCommand}`));
+      }
+    }
     return gitBridge.getState();
   }, []);
 
   const runExplanation = useCallback(
     async (cmdToRun: string) => {
+      if (processingRef.current) return;
+      processingRef.current = true;
+      const requestId = ++requestIdRef.current;
       setIsProcessing(true);
+      onProcessingChange?.(true);
+      setError('');
       try {
-        const base = await setupBaseRepo();
-        setBeforeState(JSON.parse(JSON.stringify(base)));
+        const simulation = await gitBridge.runIsolated(async () => {
+          const base = await setupBaseRepo(cmdToRun);
+          const result = await executeCommandLine(cmdToRun);
+          return {
+            before: JSON.parse(JSON.stringify(base)) as RepoState,
+            after: JSON.parse(JSON.stringify(result.state)) as RepoState,
+            result,
+          };
+        });
 
-        const res = await executeCommandLine(cmdToRun);
-        setAfterState(res.state);
-        setExplanation(res.explanation || res.stdout || 'Command executed successfully.');
+        if (requestId !== requestIdRef.current) return;
+        setBeforeState(simulation.before);
+        setAfterState(simulation.after);
+        if (simulation.result.exitCode !== 0) {
+          setExplanation('');
+          setError(stripAnsi(simulation.result.stderr || simulation.result.stdout || 'Command failed.'));
+        } else {
+          setExplanation(
+            stripAnsi(
+              simulation.result.explanation ||
+                simulation.result.stdout ||
+                'Command executed successfully.'
+            )
+          );
+        }
+      } catch (runError) {
+        if (requestId !== requestIdRef.current) return;
+        setExplanation('');
+        setError(runError instanceof Error ? runError.message : String(runError));
       } finally {
-        setIsProcessing(false);
+        if (requestId === requestIdRef.current) {
+          processingRef.current = false;
+          setIsProcessing(false);
+          onProcessingChange?.(false);
+        }
       }
     },
-    [setupBaseRepo]
+    [onProcessingChange, setupBaseRepo]
   );
 
   useEffect(() => {
+    if (hasRunInitial.current) return;
+    hasRunInitial.current = true;
     runExplanation(inputCommand);
   }, []); // Run initial preset on mount
 
@@ -91,14 +119,15 @@ export function ExplainerMode({ isDark = true }: ExplainerModeProps) {
 
         <div className={styles.presetList}>
           <span className={styles.presetLabel}>Try examples:</span>
-          {PRESET_COMMANDS.map((preset) => (
+          {EXPLAINER_PRESETS.map((preset) => (
             <button
-              key={preset}
+              key={preset.command}
               type="button"
               className={styles.presetBtn}
-              onClick={() => handleSelectPreset(preset)}
+              onClick={() => handleSelectPreset(preset.command)}
+              disabled={isProcessing}
             >
-              {preset}
+              {preset.command}
             </button>
           ))}
         </div>
@@ -111,6 +140,13 @@ export function ExplainerMode({ isDark = true }: ExplainerModeProps) {
         </div>
       )}
 
+      {error && (
+        <div className={styles.errorBox} role="alert">
+          <div className={styles.errorTitle}>Command could not be explained</div>
+          <div className={styles.diffSummaryText}>{error}</div>
+        </div>
+      )}
+
       <div className={styles.comparisonGrid}>
         <div className={styles.gridColumn}>
           <div className={styles.columnHeader}>
@@ -118,7 +154,13 @@ export function ExplainerMode({ isDark = true }: ExplainerModeProps) {
             <span>{beforeState?.commits.length || 0} commits</span>
           </div>
           <div className={styles.graphWrapper}>
-            {beforeState && <CommitGraph commits={beforeState.commits} isDark={isDark} />}
+            {beforeState && (
+              <CommitGraph
+                graphId="commitflow-before-graph"
+                commits={beforeState.commits}
+                isDark={isDark}
+              />
+            )}
           </div>
         </div>
 
@@ -128,7 +170,13 @@ export function ExplainerMode({ isDark = true }: ExplainerModeProps) {
             <span style={{ color: '#38bdf8' }}>{afterState?.commits.length || 0} commits</span>
           </div>
           <div className={styles.graphWrapper}>
-            {afterState && <CommitGraph commits={afterState.commits} isDark={isDark} />}
+            {afterState && (
+              <CommitGraph
+                graphId="commitflow-after-graph"
+                commits={afterState.commits}
+                isDark={isDark}
+              />
+            )}
           </div>
         </div>
       </div>

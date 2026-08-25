@@ -4,11 +4,11 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## P0: Repository and command correctness
 
-- [ ] Isolate Explainer repositories from Playground state so running an explanation never resets or changes the active playground.
-- [ ] Preserve the Playground repository, command history, selected scenario, and current step when entering and leaving Explainer mode.
+- [x] Isolate Explainer repositories from Playground state so running an explanation never resets or changes the active playground.
+- [x] Preserve the Playground repository, command history, selected scenario, and current step when entering and leaving Explainer mode.
 - [ ] Stop and cancel scenario playback when changing modes, resetting the repository, or loading shared history.
 - [ ] Add a serialized command queue so terminal commands, quick actions, scenarios, Explainer runs, URL replay, and Reset cannot mutate the engine concurrently.
-- [ ] Prevent Explainer preset buttons from starting overlapping simulations while another simulation is running.
+- [x] Prevent Explainer preset buttons from starting overlapping simulations while another simulation is running.
 - [x] Distinguish shell `rm` from `git rm` in the parsed command model.
 - [x] Route `git rm` and `git rm --cached` to the Git engine instead of the filesystem-only delete handler.
 - [ ] Correct cherry-pick so it applies the selected commit's changes and produces the expected working tree and index.
@@ -42,18 +42,18 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## P0: Explainer correctness
 
-- [ ] Give every Explainer preset a command-specific repository fixture.
-- [ ] Give the commit preset a staged change to commit.
-- [ ] Give the merge preset two valid branches with a meaningful merge result.
-- [ ] Give the rebase preset diverged main and feature histories.
-- [ ] Give reset presets enough history and staged state to demonstrate soft, mixed, and hard differences.
-- [ ] Give revert a non-root commit whose inverse change can be shown safely.
-- [ ] Display command errors as errors instead of presenting them as successful explanations.
+- [x] Give every Explainer preset a command-specific repository fixture.
+- [x] Give the commit preset a staged change to commit.
+- [x] Give the merge preset two valid branches with a meaningful merge result.
+- [x] Give the rebase preset diverged main and feature histories.
+- [x] Give reset presets enough history and staged state to demonstrate soft, mixed, and hard differences.
+- [x] Give revert a non-root commit whose inverse change can be shown safely.
+- [x] Display command errors as errors instead of presenting them as successful explanations.
 - [ ] Show file, branch, HEAD, staging, and working-tree differences in addition to commit-count differences.
 - [ ] Highlight exactly what changed between Before and After.
-- [ ] Use unique graph identifiers or element refs for every comparison graph.
-- [ ] Ensure exporting the After graph never exports the Before graph.
-- [ ] Disable or redefine header Reset and Share actions in Explainer mode so they operate on the visible content.
+- [x] Use unique graph identifiers or element refs for every comparison graph.
+- [x] Ensure exporting the After graph never exports the Before graph.
+- [x] Disable or redefine header Reset and Share actions in Explainer mode so they operate on the visible content.
 
 ## P1: Terminal visual treatment
 
@@ -74,7 +74,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Build one cohesive toolbar using React Flow `Panel`, `Controls`, `MiniMap`, and `colorMode` features.
 - [ ] Put PNG and SVG options inside one Export menu.
 - [ ] Theme React Flow's built-in controls so the white control stack never appears in dark mode.
-- [ ] Pass the active theme background into PNG and SVG export instead of hard-coding dark navy.
+- [x] Pass the active theme background into PNG and SVG export instead of hard-coding dark navy.
 - [ ] Exclude UI controls from exported graph images unless explicitly requested.
 - [ ] Show export progress, success, and failure feedback.
 - [ ] Use stable, descriptive export filenames.
@@ -221,10 +221,10 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Test quick actions while the terminal is focused.
 - [x] Test per-file Unstage with multiple staged files.
 - [x] Test `git rm` and `git rm --cached` independently from shell `rm`.
-- [ ] Test Playground and Explainer state isolation.
+- [x] Test Playground and Explainer state isolation.
 - [ ] Test switching modes during scenario playback.
 - [ ] Test overlapping Explainer preset clicks and command serialization.
-- [ ] Test every Explainer preset for its intended successful state change.
+- [x] Test every Explainer preset for its intended successful state change.
 - [ ] Test that Before and After exports target the correct graph.
 - [ ] Test light and dark export backgrounds.
 - [ ] Test clipboard success and failure states.

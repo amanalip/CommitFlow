@@ -3,6 +3,11 @@ import FS from '@isomorphic-git/lightning-fs';
 let currentFsName = 'commitflow-fs';
 let fsInstance = new FS(currentFsName, { wipe: true });
 
+export interface FSRuntimeContext {
+  name: string;
+  instance: FS;
+}
+
 export function getFS(): FS {
   return fsInstance;
 }
@@ -11,6 +16,15 @@ export function resetFS(): FS {
   currentFsName = `commitflow-fs-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   fsInstance = new FS(currentFsName, { wipe: true });
   return fsInstance;
+}
+
+export function captureFSContext(): FSRuntimeContext {
+  return { name: currentFsName, instance: fsInstance };
+}
+
+export function restoreFSContext(context: FSRuntimeContext): void {
+  currentFsName = context.name;
+  fsInstance = context.instance;
 }
 
 export async function ensureDir(pfs: any, dirPath: string): Promise<void> {

@@ -3,7 +3,17 @@ if (typeof globalThis !== 'undefined' && !(globalThis as any).Buffer) {
   (globalThis as any).Buffer = Buffer;
 }
 import git from 'isomorphic-git';
-import { getFS, resetFS, ensureDir, listAllFiles, readTextFile, writeTextFile } from './fs-setup';
+import {
+  getFS,
+  resetFS,
+  ensureDir,
+  listAllFiles,
+  readTextFile,
+  writeTextFile,
+  captureFSContext,
+  restoreFSContext,
+  FSRuntimeContext,
+} from './fs-setup';
 import { RepoState, CommitInfo, BranchRef, TagRef, WorkingFile } from '../model/types';
 
 const REPO_DIR = '/repo';
@@ -15,6 +25,30 @@ let defaultAuthor = {
 
 let stashList: { id: number; message: string; staged: WorkingFile[]; unstaged: WorkingFile[]; untracked: string[] }[] = [];
 let previousBranch = '';
+
+export interface GitRuntimeContext {
+  fs: FSRuntimeContext;
+  stashes: typeof stashList;
+  previousBranch: string;
+}
+
+export function startIsolatedRuntime(): GitRuntimeContext {
+  const context: GitRuntimeContext = {
+    fs: captureFSContext(),
+    stashes: stashList,
+    previousBranch,
+  };
+  resetFS();
+  stashList = [];
+  previousBranch = '';
+  return context;
+}
+
+export function restoreRuntime(context: GitRuntimeContext): void {
+  restoreFSContext(context.fs);
+  stashList = context.stashes;
+  previousBranch = context.previousBranch;
+}
 
 export function setAuthor(name: string, email: string) {
   defaultAuthor = { name, email };

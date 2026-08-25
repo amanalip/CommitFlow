@@ -64,6 +64,11 @@
   color: var(--text-color, #f8fafc);
 }
 
+.modeButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .activeMode {
   background: var(--bg-tertiary, #334155);
   color: var(--accent-color, #38bdf8);

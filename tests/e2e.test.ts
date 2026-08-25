@@ -77,10 +77,37 @@ describe('Browser End-to-End Test', () => {
     await page.waitForTimeout(200);
     expect(await terminalRows.innerText()).toContain('Filesystem & Utility Commands');
 
+    // Build a playground state that must survive an Explainer simulation.
+    for (const command of [
+      'git init',
+      'echo "preserved" > preserved.txt',
+      'git add preserved.txt',
+      'git commit -m "preserved playground"',
+    ]) {
+      await page.keyboard.insertText(command);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(250);
+    }
+    expect(await page.locator('.react-flow__node').innerText()).toContain('preserved playground');
+
     // Switch to Explainer mode
     const explainerBtn = page.getByRole('button', { name: 'Explainer' });
     await explainerBtn.click();
     await page.waitForTimeout(1000);
+    expect(await page.getByRole('alert').count()).toBe(0);
+    expect(await page.getByRole('button', { name: /Reset/ }).count()).toBe(0);
+    expect(await page.getByRole('button', { name: /Share/ }).count()).toBe(0);
+
+    const playgroundBtn = page.getByRole('button', { name: 'Playground' });
+    await page.waitForFunction(() => {
+      const button = Array.from(document.querySelectorAll('button')).find(
+        (candidate) => candidate.textContent?.trim() === 'Playground'
+      );
+      return button && !button.disabled;
+    });
+    await playgroundBtn.click();
+    await page.waitForTimeout(300);
+    expect(await page.locator('.react-flow__node').innerText()).toContain('preserved playground');
 
     // Verify footer and github link
     const footerText = await page.locator('footer').innerText();

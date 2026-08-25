@@ -29,6 +29,9 @@ export function App() {
   const [lastCommand, setLastCommand] = useState<{ command: string; explanation: string } | null>(null);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
   const [terminalResetKey, setTerminalResetKey] = useState<number>(0);
+  const [isExplainerProcessing, setIsExplainerProcessing] = useState<boolean>(false);
+  const [isCommandRunning, setIsCommandRunning] = useState<boolean>(false);
+  const activeCommandCount = useRef(0);
 
   // Scenario state
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
@@ -69,12 +72,29 @@ export function App() {
   };
 
   const handleExecuteCommand = useCallback(async (command: string): Promise<CommandResult> => {
-    const res = await executeCommandLine(command);
-    setCommandHistory((prev) => [...prev, command]);
-    if (res.explanation) {
-      setLastCommand({ command, explanation: res.explanation });
+    activeCommandCount.current += 1;
+    setIsCommandRunning(true);
+    try {
+      const res = await executeCommandLine(command);
+      setCommandHistory((prev) => [...prev, command]);
+      if (res.explanation) {
+        setLastCommand({ command, explanation: res.explanation });
+      }
+      return res;
+    } finally {
+      activeCommandCount.current -= 1;
+      if (activeCommandCount.current === 0) {
+        setIsCommandRunning(false);
+      }
     }
-    return res;
+  }, []);
+
+  const handleModeChange = useCallback((nextMode: 'playground' | 'explainer') => {
+    setIsPlaying(false);
+    isPlayingRef.current = false;
+    setSelectedCommit(null);
+    setShowExplanation(false);
+    setMode(nextMode);
   }, []);
 
   const handleResetRepo = useCallback(async () => {
@@ -189,7 +209,7 @@ export function App() {
     <div className={styles.appContainer}>
       <Header
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={handleModeChange}
         selectedScenario={selectedScenario}
         onSelectScenario={handleSelectScenario}
         onShare={handleShare}
@@ -198,6 +218,7 @@ export function App() {
         themeMode={themeMode}
         onToggleTheme={handleToggleTheme}
         hasLastCommand={Boolean(lastCommand)}
+        modeChangeDisabled={isExplainerProcessing || isCommandRunning}
       />
 
       {mode === 'playground' && selectedScenario && (
@@ -215,7 +236,10 @@ export function App() {
       )}
 
       {mode === 'explainer' ? (
-        <ExplainerMode isDark={themeMode === 'dark'} />
+        <ExplainerMode
+          isDark={themeMode === 'dark'}
+          onProcessingChange={setIsExplainerProcessing}
+        />
       ) : (
         <div className={styles.mainLayout}>
           <div className={styles.graphSection}>

@@ -22,6 +22,7 @@ class GitBridge {
     stashes: [],
   };
   private listeners = new Set<(state: RepoState) => void>();
+  private notificationSuppressionDepth = 0;
 
   public subscribe(listener: (state: RepoState) => void): () => void {
     this.listeners.add(listener);
@@ -32,8 +33,25 @@ class GitBridge {
   }
 
   private notifyListeners(state: RepoState) {
+    if (this.notificationSuppressionDepth > 0) return;
     for (const listener of this.listeners) {
       listener(state);
+    }
+  }
+
+  public async runIsolated<T>(operation: () => Promise<T>): Promise<T> {
+    const runtime = workerEngine.startIsolatedRuntime();
+    const originalState = this.currentState;
+    this.notificationSuppressionDepth++;
+
+    try {
+      this.currentState = await workerEngine.snapshotRepoState();
+      return await operation();
+    } finally {
+      workerEngine.restoreRuntime(runtime);
+      this.currentState = originalState;
+      this.notificationSuppressionDepth--;
+      this.notifyListeners(originalState);
     }
   }
 
