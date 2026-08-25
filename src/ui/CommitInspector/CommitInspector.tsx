@@ -4,10 +4,12 @@ import styles from './CommitInspector.module.css';
 
 interface CommitInspectorProps {
   commit: CommitInfo | null;
+  allCommits?: CommitInfo[];
+  onSelectCommit?: (commit: CommitInfo) => void;
   onClose: () => void;
 }
 
-export function CommitInspector({ commit, onClose }: CommitInspectorProps) {
+export function CommitInspector({ commit, allCommits = [], onSelectCommit, onClose }: CommitInspectorProps) {
   const [copiedSha, setCopiedSha] = useState(false);
 
   useEffect(() => {
@@ -28,6 +30,15 @@ export function CommitInspector({ commit, onClose }: CommitInspectorProps) {
     navigator.clipboard.writeText(commit.oid);
     setCopiedSha(true);
     setTimeout(() => setCopiedSha(false), 2000);
+  };
+
+  const handleParentClick = (parentOid: string) => {
+    if (onSelectCommit) {
+      const parent = allCommits.find((c) => c.oid === parentOid || c.oid.startsWith(parentOid));
+      if (parent) {
+        onSelectCommit(parent);
+      }
+    }
   };
 
   return (
@@ -85,9 +96,16 @@ export function CommitInspector({ commit, onClose }: CommitInspectorProps) {
                 <span className={styles.metaValue}>Root commit (initial)</span>
               ) : (
                 commit.parentOids.map((p) => (
-                  <span key={p} className={styles.parentPill}>
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => handleParentClick(p)}
+                    className={styles.parentPill}
+                    style={{ cursor: onSelectCommit ? 'pointer' : 'default', border: 'none' }}
+                    title={`Inspect parent ${p.slice(0, 7)}`}
+                  >
                     {p.slice(0, 7)}
-                  </span>
+                  </button>
                 ))
               )}
             </div>

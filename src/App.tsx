@@ -238,7 +238,12 @@ export function App() {
       )}
 
       {selectedCommit && (
-        <CommitInspector commit={selectedCommit} onClose={() => setSelectedCommit(null)} />
+        <CommitInspector
+          commit={selectedCommit}
+          allCommits={repoState.commits}
+          onSelectCommit={setSelectedCommit}
+          onClose={() => setSelectedCommit(null)}
+        />
       )}
 
       {showExplanation && lastCommand && (
