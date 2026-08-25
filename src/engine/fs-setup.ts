@@ -1,20 +1,15 @@
 import FS from '@isomorphic-git/lightning-fs';
 
 let currentFsName = 'commitflow-fs';
-let fsInstance: FS | null = null;
+let fsInstance = new FS(currentFsName, { wipe: true });
 
-export function getFS(name = currentFsName): FS {
-  if (!fsInstance || currentFsName !== name) {
-    currentFsName = name;
-    fsInstance = new FS(name, { wipe: true });
-  }
+export function getFS(): FS {
   return fsInstance;
 }
 
 export function resetFS(): FS {
-  const newName = `commitflow-fs-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  currentFsName = newName;
-  fsInstance = new FS(newName, { wipe: true });
+  currentFsName = `commitflow-fs-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  fsInstance = new FS(currentFsName, { wipe: true });
   return fsInstance;
 }
 
@@ -27,7 +22,7 @@ export async function ensureDir(pfs: any, dirPath: string): Promise<void> {
       await pfs.mkdir(current);
     } catch (e: any) {
       if (e.code !== 'EEXIST') {
-        throw e;
+        // Ignore directory exists
       }
     }
   }
@@ -56,7 +51,7 @@ export async function listAllFiles(pfs: any, baseDir = '/repo', prefix = ''): Pr
         files.push(relPath);
       }
     } catch {
-      // Ignore unreadable entries
+      // Ignore
     }
   }
   return files;

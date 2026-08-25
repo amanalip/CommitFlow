@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { RepoState, CommitInfo, Scenario } from './model/types';
+import { RepoState, CommitInfo, Scenario, CommandResult } from './model/types';
 import { gitBridge } from './engine/git-bridge';
 import { executeCommandLine } from './parser/command-map';
 import { encodeCommandHistoryToHash, decodeCommandHistoryFromHash } from './share/url-codec';
@@ -65,12 +65,13 @@ export function App() {
     setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  const handleExecuteCommand = useCallback(async (command: string) => {
+  const handleExecuteCommand = useCallback(async (command: string): Promise<CommandResult> => {
     const res = await executeCommandLine(command);
     setCommandHistory((prev) => [...prev, command]);
     if (res.explanation) {
       setLastCommand({ command, explanation: res.explanation });
     }
+    return res;
   }, []);
 
   const handleResetRepo = useCallback(async () => {

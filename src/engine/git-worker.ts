@@ -1,10 +1,12 @@
+import { Buffer } from 'buffer';
+if (typeof globalThis !== 'undefined' && !(globalThis as any).Buffer) {
+  (globalThis as any).Buffer = Buffer;
+}
 import git from 'isomorphic-git';
 import { getFS, resetFS, ensureDir, listAllFiles, readTextFile, writeTextFile } from './fs-setup';
 import { RepoState, CommitInfo, BranchRef, TagRef, WorkingFile } from '../model/types';
 
 const REPO_DIR = '/repo';
-let fs = getFS();
-let pfs = fs.promises;
 
 let defaultAuthor = {
   name: 'CommitFlow User',
@@ -16,6 +18,8 @@ export function setAuthor(name: string, email: string) {
 }
 
 async function isRepoInitialized(): Promise<boolean> {
+  const fs = getFS();
+  const pfs = fs.promises;
   try {
     await pfs.stat(`${REPO_DIR}/.git`);
     return true;
@@ -25,6 +29,7 @@ async function isRepoInitialized(): Promise<boolean> {
 }
 
 export async function resolveCommitRef(ref: string): Promise<string> {
+  const fs = getFS();
   const matchTilde = ref.match(/^(.*?)~(\d+)$/);
   const matchCaret = ref.match(/^(.*?)\^+$/);
 
@@ -64,6 +69,9 @@ export async function resolveCommitRef(ref: string): Promise<string> {
 }
 
 export async function snapshotRepoState(): Promise<RepoState> {
+  const fs = getFS();
+  const pfs = fs.promises;
+
   const initialized = await isRepoInitialized();
   if (!initialized) {
     return {
@@ -262,6 +270,8 @@ export async function snapshotRepoState(): Promise<RepoState> {
 }
 
 export async function executeInit(defaultBranch = 'main'): Promise<string> {
+  const fs = getFS();
+  const pfs = fs.promises;
   await ensureDir(pfs, REPO_DIR);
   await git.init({
     fs,
@@ -272,6 +282,9 @@ export async function executeInit(defaultBranch = 'main'): Promise<string> {
 }
 
 export async function executeAdd(filepaths: string[]): Promise<string> {
+  const fs = getFS();
+  const pfs = fs.promises;
+
   if (filepaths.includes('.') || filepaths.includes('-A') || filepaths.includes('--all')) {
     const matrix = await git.statusMatrix({ fs, dir: REPO_DIR });
     for (const [filepath, , workdirStatus] of matrix) {
@@ -283,21 +296,22 @@ export async function executeAdd(filepaths: string[]): Promise<string> {
     }
   } else {
     for (const file of filepaths) {
+      const cleanFile = file.replace(/^\.\//, '');
       try {
-        const stat = await pfs.stat(`${REPO_DIR}/${file}`);
+        const stat = await pfs.stat(`${REPO_DIR}/${cleanFile}`);
         if (stat.isDirectory()) {
-          const files = await listAllFiles(pfs, REPO_DIR, file);
+          const files = await listAllFiles(pfs, REPO_DIR, cleanFile);
           for (const sub of files) {
             await git.add({ fs, dir: REPO_DIR, filepath: sub });
           }
         } else {
-          await git.add({ fs, dir: REPO_DIR, filepath: file });
+          await git.add({ fs, dir: REPO_DIR, filepath: cleanFile });
         }
       } catch {
         try {
-          await git.remove({ fs, dir: REPO_DIR, filepath: file });
+          await git.remove({ fs, dir: REPO_DIR, filepath: cleanFile });
         } catch {
-          throw new Error(`pathspec '${file}' did not match any files`);
+          throw new Error(`pathspec '${cleanFile}' did not match any files`);
         }
       }
     }
@@ -306,11 +320,14 @@ export async function executeAdd(filepaths: string[]): Promise<string> {
 }
 
 export async function executeRm(filepaths: string[], cached = false): Promise<string> {
+  const fs = getFS();
+  const pfs = fs.promises;
   for (const file of filepaths) {
-    await git.remove({ fs, dir: REPO_DIR, filepath: file });
+    const cleanFile = file.replace(/^\.\//, '');
+    await git.remove({ fs, dir: REPO_DIR, filepath: cleanFile });
     if (!cached) {
       try {
-        await pfs.unlink(`${REPO_DIR}/${file}`);
+        await pfs.unlink(`${REPO_DIR}/${cleanFile}`);
       } catch {
         // File may already be absent
       }
@@ -320,6 +337,7 @@ export async function executeRm(filepaths: string[], cached = false): Promise<st
 }
 
 export async function executeCommit(message: string, _allowEmpty = false): Promise<{ sha: string; output: string }> {
+  const fs = getFS();
   const sha = await git.commit({
     fs,
     dir: REPO_DIR,
@@ -348,6 +366,7 @@ export async function executeBranch(args: {
   delete?: string;
   forceDelete?: string;
 }): Promise<string> {
+  const fs = getFS();
   if (args.create) {
     await git.branch({
       fs,
@@ -376,6 +395,7 @@ export async function executeBranch(args: {
 }
 
 export async function executeCheckout(target: string, createBranch = false): Promise<string> {
+  const fs = getFS();
   if (createBranch) {
     await git.branch({
       fs,
@@ -410,6 +430,7 @@ export async function executeCheckout(target: string, createBranch = false): Pro
 }
 
 export async function executeMerge(theirsBranch: string, message?: string): Promise<string> {
+  const fs = getFS();
   const current = await git.currentBranch({ fs, dir: REPO_DIR });
   if (!current) {
     throw new Error('You are in detached HEAD state. Cannot merge.');
@@ -442,6 +463,7 @@ export async function executeTag(args: {
   delete?: string;
   message?: string;
 }): Promise<string> {
+  const fs = getFS();
   if (args.delete) {
     await git.deleteTag({
       fs,
@@ -473,6 +495,8 @@ export async function executeTag(args: {
 }
 
 export async function executeReset(targetRef: string, mode: 'soft' | 'mixed' | 'hard' = 'mixed'): Promise<string> {
+  const fs = getFS();
+  const pfs = fs.promises;
   const targetOid = await resolveCommitRef(targetRef);
 
   const current = await git.currentBranch({ fs, dir: REPO_DIR });
@@ -510,6 +534,7 @@ export async function executeReset(targetRef: string, mode: 'soft' | 'mixed' | '
 }
 
 export async function executeRevert(commitRef: string): Promise<string> {
+  const fs = getFS();
   const targetOid = await resolveCommitRef(commitRef);
   const commitObj = await git.readCommit({ fs, dir: REPO_DIR, oid: targetOid });
   const message = `Revert "${commitObj.commit.message.split('\n')[0]}"\n\nThis reverts commit ${targetOid}.`;
@@ -535,6 +560,7 @@ export async function executeRevert(commitRef: string): Promise<string> {
 }
 
 export async function executeCherryPick(commitRef: string): Promise<string> {
+  const fs = getFS();
   const targetOid = await resolveCommitRef(commitRef);
   const commitObj = await git.readCommit({ fs, dir: REPO_DIR, oid: targetOid });
   const message = commitObj.commit.message;
@@ -551,6 +577,7 @@ export async function executeCherryPick(commitRef: string): Promise<string> {
 }
 
 export async function executeRebase(upstreamBranch: string): Promise<string> {
+  const fs = getFS();
   const current = await git.currentBranch({ fs, dir: REPO_DIR });
   if (!current) {
     throw new Error('Cannot rebase in detached HEAD state');
@@ -604,7 +631,10 @@ export async function executeRebase(upstreamBranch: string): Promise<string> {
 }
 
 export async function executeWriteFile(path: string, content: string, append = false): Promise<string> {
-  const fullPath = `${REPO_DIR}/${path.replace(/^\//, '')}`;
+  const fs = getFS();
+  const pfs = fs.promises;
+  const cleanPath = path.replace(/^\.\//, '').replace(/^\//, '');
+  const fullPath = `${REPO_DIR}/${cleanPath}`;
   let finalContent = content;
   if (append) {
     const existing = await readTextFile(pfs, fullPath);
@@ -615,7 +645,10 @@ export async function executeWriteFile(path: string, content: string, append = f
 }
 
 export async function executeDeleteFile(path: string): Promise<string> {
-  const fullPath = `${REPO_DIR}/${path.replace(/^\//, '')}`;
+  const fs = getFS();
+  const pfs = fs.promises;
+  const cleanPath = path.replace(/^\.\//, '').replace(/^\//, '');
+  const fullPath = `${REPO_DIR}/${cleanPath}`;
   try {
     await pfs.unlink(fullPath);
   } catch {
@@ -625,106 +658,20 @@ export async function executeDeleteFile(path: string): Promise<string> {
 }
 
 export async function executeReadFile(path: string): Promise<string> {
-  const fullPath = `${REPO_DIR}/${path.replace(/^\//, '')}`;
+  const fs = getFS();
+  const pfs = fs.promises;
+  const cleanPath = path.replace(/^\.\//, '').replace(/^\//, '');
+  const fullPath = `${REPO_DIR}/${cleanPath}`;
   return readTextFile(pfs, fullPath);
 }
 
 export async function executeListFiles(): Promise<string[]> {
+  const fs = getFS();
+  const pfs = fs.promises;
   return listAllFiles(pfs, REPO_DIR);
 }
 
 export async function resetRepository(): Promise<RepoState> {
-  fs = resetFS();
-  pfs = fs.promises;
+  resetFS();
   return snapshotRepoState();
-}
-
-// Worker message router (only in Web Worker context)
-if (typeof self !== 'undefined' && typeof (self as any).postMessage === 'function') {
-  self.onmessage = async (e: MessageEvent) => {
-    const { id, type, payload } = e.data;
-    try {
-      let output = '';
-      let extra: any = {};
-
-      switch (type) {
-        case 'INIT':
-          output = await executeInit(payload?.defaultBranch || 'main');
-          break;
-        case 'ADD':
-          output = await executeAdd(payload.files);
-          break;
-        case 'RM':
-          output = await executeRm(payload.files, payload.cached);
-          break;
-        case 'COMMIT': {
-          const res = await executeCommit(payload.message, payload.allowEmpty);
-          output = res.output;
-          extra.sha = res.sha;
-          break;
-        }
-        case 'BRANCH':
-          output = await executeBranch(payload);
-          break;
-        case 'CHECKOUT':
-          output = await executeCheckout(payload.target, payload.createBranch);
-          break;
-        case 'MERGE':
-          output = await executeMerge(payload.theirs, payload.message);
-          break;
-        case 'REBASE':
-          output = await executeRebase(payload.upstream);
-          break;
-        case 'CHERRY_PICK':
-          output = await executeCherryPick(payload.commit);
-          break;
-        case 'TAG':
-          output = await executeTag(payload);
-          break;
-        case 'RESET':
-          output = await executeReset(payload.target, payload.mode);
-          break;
-        case 'REVERT':
-          output = await executeRevert(payload.commit);
-          break;
-        case 'WRITE_FILE':
-          output = await executeWriteFile(payload.path, payload.content, payload.append);
-          break;
-        case 'DELETE_FILE':
-          output = await executeDeleteFile(payload.path);
-          break;
-        case 'READ_FILE':
-          output = await executeReadFile(payload.path);
-          break;
-        case 'RESET_REPO':
-          await resetRepository();
-          break;
-        case 'GET_STATE':
-          break;
-        default:
-          throw new Error(`Unknown worker operation: ${type}`);
-      }
-
-      const state = await snapshotRepoState();
-      self.postMessage({ id, success: true, output, state, extra });
-    } catch (err: any) {
-      let state: RepoState;
-      try {
-        state = await snapshotRepoState();
-      } catch {
-        state = {
-          initialized: false,
-          head: { type: 'branch', target: 'main' },
-          branches: [],
-          tags: [],
-          commits: [],
-          stagedFiles: [],
-          unstagedFiles: [],
-          untrackedFiles: [],
-          stashes: [],
-        };
-      }
-      self.postMessage({ id, success: false, error: err.message || String(err), state });
-    }
-  };
 }

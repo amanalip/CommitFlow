@@ -15,6 +15,7 @@
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
     "@xyflow/react": "^12.4.4",
+    "buffer": "^6.0.3",
     "clsx": "^2.1.1",
     "framer-motion": "^12.4.10",
     "html-to-image": "^1.11.11",
@@ -31,6 +32,7 @@
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "fake-indexeddb": "^6.2.5",
+    "playwright": "^1.62.1",
     "typescript": "^5.8.2",
     "vite": "^6.2.0",
     "vitest": "^3.0.7"

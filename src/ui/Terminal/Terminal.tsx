@@ -3,14 +3,14 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
-import { RepoState } from '../../model/types';
+import { RepoState, CommandResult } from '../../model/types';
 import { THEMES, ThemeMode } from '../../theme/theme';
 import { getAutocompleteCandidates } from '../../parser/suggestions';
 import styles from './Terminal.module.css';
 
 interface TerminalProps {
   repoState: RepoState;
-  onExecuteCommand: (command: string) => Promise<void>;
+  onExecuteCommand: (command: string) => Promise<CommandResult>;
   themeMode?: ThemeMode;
 }
 
@@ -25,15 +25,22 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
   const cursorPosition = useRef<number>(0);
   const isExecuting = useRef<boolean>(false);
 
+  const repoStateRef = useRef<RepoState>(repoState);
+  repoStateRef.current = repoState;
+
+  const onExecuteCommandRef = useRef(onExecuteCommand);
+  onExecuteCommandRef.current = onExecuteCommand;
+
   const getPrompt = useCallback(() => {
-    if (!repoState.initialized) {
+    const state = repoStateRef.current;
+    if (!state.initialized) {
       return '\x1b[38;2;148;163;184mcommitflow\x1b[0m \x1b[38;2;56;189;248m$\x1b[0m ';
     }
-    const branchName = repoState.head.type === 'detached'
-      ? `(${repoState.head.target})`
-      : `(${repoState.head.target})`;
+    const branchName = state.head.type === 'detached'
+      ? `(${state.head.target})`
+      : `(${state.head.target})`;
     return `\x1b[38;2;148;163;184mrepo\x1b[0m \x1b[38;2;74;222;128m${branchName}\x1b[0m \x1b[38;2;56;189;248m$\x1b[0m `;
-  }, [repoState]);
+  }, []);
 
   const writePrompt = useCallback(() => {
     if (xtermInstance.current) {
@@ -43,9 +50,22 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
     }
   }, [getPrompt]);
 
-  // Handle terminal initialization
+  const safeFit = useCallback(() => {
+    if (!terminalRef.current || !fitAddonRef.current) return;
+    const { clientWidth, clientHeight } = terminalRef.current;
+    if (clientWidth > 0 && clientHeight > 0) {
+      try {
+        fitAddonRef.current.fit();
+      } catch {
+        // Ignore fit measurement error
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!terminalRef.current) return;
+
+    terminalRef.current.innerHTML = '';
 
     const termTheme = THEMES[themeMode].xterm;
     const term = new XTerm({
@@ -55,12 +75,12 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
       lineHeight: 1.25,
       theme: termTheme,
       convertEol: true,
+      allowProposedApi: true,
     });
 
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(terminalRef.current);
-    fitAddon.fit();
 
     xtermInstance.current = term;
     fitAddonRef.current = fitAddon;
@@ -69,45 +89,26 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
     term.writeln('\x1b[90mType "git init" to start or "help" for a list of commands.\x1b[0m\n');
     writePrompt();
 
+    const timer = setTimeout(() => {
+      safeFit();
+    }, 100);
+
     const handleResize = () => {
-      try {
-        fitAddon.fit();
-      } catch {
-        // Ignore fit error on hidden tab
-      }
+      safeFit();
     };
     window.addEventListener('resize', handleResize);
 
     const resizeObserver = new ResizeObserver(() => {
-      handleResize();
+      safeFit();
     });
     resizeObserver.observe(terminalRef.current);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      resizeObserver.disconnect();
-      term.dispose();
-      xtermInstance.current = null;
-    };
-  }, [themeMode, writePrompt]);
-
-  useEffect(() => {
-    if (xtermInstance.current) {
-      xtermInstance.current.options.theme = THEMES[themeMode].xterm;
-    }
-  }, [themeMode]);
-
-  useEffect(() => {
-    const term = xtermInstance.current;
-    if (!term) return;
 
     const disposable = term.onKey(async ({ key, domEvent }) => {
       if (isExecuting.current) return;
 
-      const ev = domEvent;
-      const printable = !ev.altKey && !ev.ctrlKey && !ev.metaKey;
+      const keyName = domEvent.key;
 
-      if (ev.keyCode === 13) {
+      if (keyName === 'Enter') {
         const line = currentLine.current.trim();
         term.write('\r\n');
 
@@ -116,7 +117,17 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
           historyIndex.current = commandHistory.current.length;
           isExecuting.current = true;
           try {
-            await onExecuteCommand(line);
+            const res = await onExecuteCommandRef.current(line);
+            if (res) {
+              if (res.stdout) {
+                term.write(res.stdout.replace(/\n/g, '\r\n') + '\r\n');
+              }
+              if (res.stderr) {
+                term.write(res.stderr.replace(/\n/g, '\r\n') + '\r\n');
+              }
+            }
+          } catch (err: any) {
+            term.write(`\x1b[31m${err.message || String(err)}\x1b[0m\r\n`);
           } finally {
             isExecuting.current = false;
             writePrompt();
@@ -124,7 +135,7 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
         } else {
           writePrompt();
         }
-      } else if (ev.keyCode === 8) {
+      } else if (keyName === 'Backspace') {
         if (cursorPosition.current > 0) {
           const before = currentLine.current.slice(0, cursorPosition.current - 1);
           const after = currentLine.current.slice(cursorPosition.current);
@@ -133,7 +144,7 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
 
           term.write('\b' + after + ' ' + '\b'.repeat(after.length + 1));
         }
-      } else if (ev.keyCode === 38) {
+      } else if (keyName === 'ArrowUp') {
         if (historyIndex.current > 0) {
           historyIndex.current--;
           const histCmd = commandHistory.current[historyIndex.current];
@@ -142,7 +153,7 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
           currentLine.current = histCmd;
           cursorPosition.current = histCmd.length;
         }
-      } else if (ev.keyCode === 40) {
+      } else if (keyName === 'ArrowDown') {
         if (historyIndex.current < commandHistory.current.length - 1) {
           historyIndex.current++;
           const histCmd = commandHistory.current[historyIndex.current];
@@ -156,13 +167,14 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
           currentLine.current = '';
           cursorPosition.current = 0;
         }
-      } else if (ev.keyCode === 9) {
-        ev.preventDefault();
-        const branchNames = repoState.branches.map((b) => b.name);
+      } else if (keyName === 'Tab') {
+        domEvent.preventDefault();
+        const state = repoStateRef.current;
+        const branchNames = state.branches.map((b) => b.name);
         const fileNames = [
-          ...repoState.stagedFiles.map((f) => f.path),
-          ...repoState.unstagedFiles.map((f) => f.path),
-          ...repoState.untrackedFiles,
+          ...state.stagedFiles.map((f) => f.path),
+          ...state.unstagedFiles.map((f) => f.path),
+          ...state.untrackedFiles,
         ];
         const candidates = getAutocompleteCandidates(currentLine.current, branchNames, fileNames);
         if (candidates.length === 1) {
@@ -175,7 +187,7 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
           term.writeln('\r\n' + candidates.join('   '));
           term.write(getPrompt() + currentLine.current);
         }
-      } else if (printable) {
+      } else if (key.length === 1 && !domEvent.ctrlKey && !domEvent.altKey && !domEvent.metaKey) {
         const before = currentLine.current.slice(0, cursorPosition.current);
         const after = currentLine.current.slice(cursorPosition.current);
         currentLine.current = before + key + after;
@@ -186,9 +198,25 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
     });
 
     return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       disposable.dispose();
+      try {
+        term.dispose();
+      } catch {
+        // Ignore
+      }
+      xtermInstance.current = null;
+      fitAddonRef.current = null;
     };
-  }, [getPrompt, onExecuteCommand, repoState, writePrompt]);
+  }, [themeMode, safeFit, getPrompt, writePrompt]);
+
+  useEffect(() => {
+    if (xtermInstance.current) {
+      xtermInstance.current.options.theme = THEMES[themeMode].xterm;
+    }
+  }, [themeMode]);
 
   const handleClear = () => {
     if (xtermInstance.current) {

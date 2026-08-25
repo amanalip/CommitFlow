@@ -10,14 +10,6 @@ export interface BridgeResponse<T = any> {
 }
 
 class GitBridge {
-  private worker: Worker | null = null;
-  private pendingRequests = new Map<
-    string,
-    {
-      resolve: (value: BridgeResponse) => void;
-      reject: (reason: any) => void;
-    }
-  >();
   private currentState: RepoState = {
     initialized: false,
     head: { type: 'branch', target: 'main' },
@@ -30,38 +22,6 @@ class GitBridge {
     stashes: [],
   };
   private listeners = new Set<(state: RepoState) => void>();
-
-  constructor() {
-    this.initWorker();
-  }
-
-  private initWorker() {
-    if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
-      try {
-        this.worker = new Worker(new URL('./git-worker.ts', import.meta.url), {
-          type: 'module',
-        });
-        this.worker.onmessage = (e: MessageEvent) => {
-          const { id, success, output, error, state, extra } = e.data;
-          if (state) {
-            this.currentState = state;
-            this.notifyListeners(state);
-          }
-          const pending = this.pendingRequests.get(id);
-          if (pending) {
-            this.pendingRequests.delete(id);
-            if (success) {
-              pending.resolve({ success: true, output, state, extra });
-            } else {
-              pending.resolve({ success: false, error, state });
-            }
-          }
-        };
-      } catch {
-        this.worker = null;
-      }
-    }
-  }
 
   public subscribe(listener: (state: RepoState) => void): () => void {
     this.listeners.add(listener);
@@ -78,16 +38,6 @@ class GitBridge {
   }
 
   public async send(type: string, payload: any = {}): Promise<BridgeResponse> {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-    if (this.worker) {
-      return new Promise((resolve, reject) => {
-        this.pendingRequests.set(id, { resolve, reject });
-        this.worker!.postMessage({ id, type, payload });
-      });
-    }
-
-    // Direct fallback for Node / Vitest
     try {
       let output = '';
       let extra: any = {};
