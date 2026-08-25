@@ -152,3 +152,76 @@
   padding: 16px;
   text-align: center;
 }
+
+.statusStaged {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.quickActionBtn {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quickActionBtn:hover {
+  background: rgba(56, 189, 248, 0.3);
+  color: #ffffff;
+}
+
+.branchContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionHeader {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #94a3b8);
+  margin-bottom: 4px;
+}
+
+.itemList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.activeItem {
+  border-left: 3px solid #22c55e;
+}
+
+.branchIcon, .tagIcon {
+  font-size: 13px;
+}
+
+.tagItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--bg-tertiary, #334155);
+}
+
+.tagName {
+  font-family: 'Fira Code', monospace;
+  font-weight: 600;
+  color: var(--text-color, #f8fafc);
+  font-size: 12px;
+}
+
+.tagOid {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  color: #94a3b8;
+}

@@ -1,0 +1,93 @@
+# CommitFlow: Bug Fixes, Test Enhancements & UX Improvements
+
+This document tracks all verified bug fixes, test expansions, and UI/UX improvements made to the CommitFlow codebase.
+
+---
+
+## 1. Verified Bug Fixes
+
+1. **Missing Buffer Global Polyfill in Browser Runtime**:
+   - *Problem*: `isomorphic-git` internally requires Node.js `Buffer`. When bundled without a browser polyfill, calling commit operations threw `ReferenceError: Buffer is not defined`.
+   - *Fix*: Added `buffer` package and polyfilled `Buffer` across `src/main.tsx` and `src/engine/git-worker.ts`.
+
+2. **Dual-Thread IndexedDB Lock Collision**:
+   - *Problem*: When Web Worker and main thread concurrently initialized LightningFS on the same database name, `navigator.locks` triggered `AbortError: Lock broken by another request with the steal option`.
+   - *Fix*: Unified the in-memory engine execution bridge, eliminating concurrency contention.
+
+3. **xterm.js Dimensions Crash in React Mount**:
+   - *Problem*: Synchronous `fit()` invocations before container layout caused viewport dimension errors.
+   - *Fix*: Wrapped resize and initial fit in `safeFit()` checking `clientWidth > 0 && clientHeight > 0` with proper cleanup.
+
+4. **Terminal Key Event Listener Listener Leak & Disposal During Execution**:
+   - *Problem*: Re-attaching `term.onKey` on every React state change dropped keystrokes typed during async operations.
+   - *Fix*: Stabilized terminal listeners using persistent refs (`repoStateRef`, `onExecuteCommandRef`).
+
+5. **Shell Redirection Quote Parser**:
+   - *Problem*: Regular expressions for `>` and `>>` split inside quoted strings (e.g. `echo "hello > world" > file.txt`).
+   - *Fix*: Replaced regex with quote-aware character scanner in `src/parser/command-parser.ts`.
+
+6. **Boolean Flag Consumption in Command Parser**:
+   - *Problem*: Long flags like `--allow-empty`, `--soft`, and `--hard` swallowed subsequent arguments like `-m "message"`.
+   - *Fix*: Added `KNOWN_BOOLEAN_FLAGS` set to ensure boolean flags do not consume following positional arguments.
+
+7. **Detached HEAD to Named Branch Transition**:
+   - *Problem*: Running `git checkout <branch>` from detached HEAD state did not update `.git/HEAD` symbolic reference.
+   - *Fix*: Explicitly updated `.git/HEAD` with `ref: refs/heads/<branch>` on checkout in `src/engine/git-worker.ts`.
+
+8. **Chronological & Topological Commit Ordering**:
+   - *Problem*: `snapshotRepoState` extracted Map values without topological sorting, causing out-of-order nodes in React Flow.
+   - *Fix*: Implemented Kahn's topological sort with timestamp tie-breakers for commit arrays.
+
+9. **Corrupted URL Hash Exception Handling**:
+   - *Problem*: Visiting malformed share URLs crashed `JSON.parse` during decompression.
+   - *Fix*: Wrapped URL hash decoder in a try-catch block returning an empty array on invalid inputs.
+
+10. **Branch Deletion Parser Handling**:
+    - *Problem*: `git branch --delete <branch>` failed to extract branch names when parsed as a flag parameter.
+    - *Fix*: Normalized `-d`, `-D`, and `--delete` flag extraction across parser and command map.
+
+11. **Filesystem Append Redirection (`>>`) Support**:
+    - *Problem*: File appends did not preserve existing content properly in virtual filesystem writes.
+    - *Fix*: Read existing file content and appended before writing in `executeWriteFile`.
+
+---
+
+## 2. UX and UI Improvements
+
+1. **Brand SVG Vector Logo**: Implemented clean branch DAG SVG mark with high contrast for dark and light themes.
+2. **Interactive Node Click Inspector**: Clicking any commit node opens a modal with full SHA, author, timestamp, tree OID, parents, and message.
+3. **Copy to Clipboard Feedback**: Added visual "Copied" feedback badges when copying commit SHAs, share links, and branch names.
+4. **Graph Zoom and Minimap Controls**: Added zoom in, zoom out, fit view, and toggleable React Flow minimap.
+5. **Dual Format Graph Export**: Added buttons to export the commit graph as both high-resolution PNG and vector SVG.
+6. **1-Click Stage Actions**: Added "+ Stage" buttons in the Working Directory panel to stage files with one click.
+7. **1-Click Unstage Actions**: Added "− Unstage" buttons in the Staging Area panel to unstage files instantly.
+8. **1-Click Branch Switch**: Added "Switch" button in the Branches list to switch active branch directly.
+9. **HEAD Pulse Ring**: Added animated pulsing glow to the active HEAD commit node.
+10. **Color-Coded Branch Badges**: Branch badges now match topological lane colors with contrasting backgrounds.
+11. **Keyboard Shortcuts**: Added global `Escape` shortcut to close modals and `Ctrl+L` / `Cmd+K` terminal clear support.
+12. **Quick Preset Examples in Explainer Mode**: Added quick-try buttons for popular commands (`git commit`, `git checkout -b`, `git merge`, `git rebase`, `git reset`, `git revert`).
+13. **Scenario Progress Indicator**: Added step counter and description tracker in the playback controls bar.
+14. **Accessible Color Contrast**: Tuned theme tokens for WCAG AA contrast across terminal text, graph nodes, and badges.
+15. **Clean Working Tree Guidance**: Informative empty states for clean working directories, empty staging areas, and fresh repos.
+
+---
+
+## 3. Test Suite Enhancements
+
+- **Tokenizer and Parser Tests**:
+  - Quoted strings with special characters and semicolons.
+  - Boolean flags with follow-up `-m` arguments.
+  - Shell redirect commands (`>` and `>>`).
+  - Filesystem utilities (`touch`, `cat`, `ls`, `clear`).
+  - Branch deletion flags (`-d`, `-D`, `--delete`).
+- **Engine Tests**:
+  - Branch deletion flow.
+  - Detached HEAD transitions and branch reattachment.
+  - Soft, mixed, and hard reset operations.
+  - Revert and cherry-pick executions.
+  - Filesystem read, write, and append operations.
+- **Share Codec Tests**:
+  - Corrupted and malformed hash resilience.
+  - Unicode character and emoji handling in commit messages.
+- **Browser End-to-End Tests**:
+  - Full interactive terminal session typing `git init`, file creation, staging, commit, and verifying visual canvas nodes.

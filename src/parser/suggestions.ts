@@ -17,7 +17,7 @@ export function levenshteinDistance(a: string, b: string): number {
         matrix[i][j] = Math.min(
           matrix[i - 1][j - 1] + 1, // substitution
           matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
+          matrix[i - 1][j + 1] || matrix[i - 1][j] + 1 // deletion
         );
       }
     }
@@ -63,14 +63,17 @@ export function findClosestGitCommand(input: string): string | null {
 }
 
 export function getAutocompleteCandidates(
-  currentWord: string,
+  currentLine: string,
   branches: string[] = [],
   files: string[] = []
 ): string[] {
-  const candidates: string[] = [];
+  const trimmed = currentLine.trimStart();
+  const parts = trimmed.split(/\s+/);
 
-  if (currentWord.startsWith('git ')) {
-    const sub = currentWord.slice(4).trim();
+  // If typing first token or single sub: e.g. "git che" or "che"
+  if (parts.length === 2 && parts[0] === 'git') {
+    const sub = parts[1];
+    const candidates: string[] = [];
     for (const cmd of GIT_COMMANDS) {
       if (cmd.startsWith(sub)) {
         candidates.push(`git ${cmd}`);
@@ -79,23 +82,38 @@ export function getAutocompleteCandidates(
     return candidates;
   }
 
+  // If typing git branch-related command: e.g. "git checkout fea", "git switch fea", "git merge fea"
+  if (parts.length >= 3 && parts[0] === 'git' && ['checkout', 'switch', 'merge', 'rebase', 'branch'].includes(parts[1])) {
+    const prefix = parts.slice(0, -1).join(' ');
+    const lastPart = parts[parts.length - 1];
+    const candidates: string[] = [];
+    for (const b of branches) {
+      if (b.startsWith(lastPart)) {
+        candidates.push(`${prefix} ${b}`);
+      }
+    }
+    return candidates;
+  }
+
+  // If typing file-related command: e.g. "git add app", "cat app", "touch app"
+  if (parts.length >= 2 && (['add', 'rm'].includes(parts[1]) || ['cat', 'touch', 'rm'].includes(parts[0]))) {
+    const prefix = parts.slice(0, -1).join(' ');
+    const lastPart = parts[parts.length - 1];
+    const candidates: string[] = [];
+    for (const f of files) {
+      if (f.startsWith(lastPart)) {
+        candidates.push(`${prefix} ${f}`);
+      }
+    }
+    return candidates;
+  }
+
+  // Fallback single word match
+  const candidates: string[] = [];
   for (const cmd of GIT_COMMANDS) {
-    if (cmd.startsWith(currentWord)) {
+    if (cmd.startsWith(trimmed)) {
       candidates.push(cmd);
     }
   }
-
-  for (const b of branches) {
-    if (b.startsWith(currentWord)) {
-      candidates.push(b);
-    }
-  }
-
-  for (const f of files) {
-    if (f.startsWith(currentWord)) {
-      candidates.push(f);
-    }
-  }
-
   return candidates;
 }

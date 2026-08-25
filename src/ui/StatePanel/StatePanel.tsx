@@ -7,9 +7,10 @@ import styles from './StatePanel.module.css';
 
 interface StatePanelProps {
   repoState: RepoState;
+  onAction?: (command: string) => void;
 }
 
-export function StatePanel({ repoState }: StatePanelProps) {
+export function StatePanel({ repoState, onAction }: StatePanelProps) {
   const [activeTab, setActiveTab] = useState<'working' | 'staging' | 'branches'>('working');
 
   const unstagedCount = repoState.unstagedFiles.length + repoState.untrackedFiles.length;
@@ -43,9 +44,9 @@ export function StatePanel({ repoState }: StatePanelProps) {
       </div>
 
       <div className={styles.panelContent}>
-        {activeTab === 'working' && <WorkingDirPanel repoState={repoState} />}
-        {activeTab === 'staging' && <StagingPanel repoState={repoState} />}
-        {activeTab === 'branches' && <BranchListPanel repoState={repoState} />}
+        {activeTab === 'working' && <WorkingDirPanel repoState={repoState} onAction={onAction} />}
+        {activeTab === 'staging' && <StagingPanel repoState={repoState} onAction={onAction} />}
+        {activeTab === 'branches' && <BranchListPanel repoState={repoState} onAction={onAction} />}
       </div>
     </div>
   );

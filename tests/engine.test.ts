@@ -53,7 +53,71 @@ describe('Git Engine Workflow', () => {
     expect(mergeRes.state.head.target).toBe('main');
   });
 
-  it('handles git tag, reset, revert, cherry-pick, and rebase', async () => {
+  it('handles branch deletion with -d and -D', async () => {
+    await executeCommandLine('git init');
+    await executeCommandLine('touch a.txt');
+    await executeCommandLine('echo "a" > a.txt');
+    await executeCommandLine('git add a.txt');
+    await executeCommandLine('git commit -m "c1"');
+
+    await executeCommandLine('git branch feature-temp');
+    expect(gitBridge.getState().branches.some((b) => b.name === 'feature-temp')).toBe(true);
+
+    const delRes = await executeCommandLine('git branch -d feature-temp');
+    expect(delRes.exitCode).toBe(0);
+    expect(gitBridge.getState().branches.some((b) => b.name === 'feature-temp')).toBe(false);
+  });
+
+  it('handles detached HEAD state and switching back to branch', async () => {
+    await executeCommandLine('git init');
+    await executeCommandLine('touch a.txt');
+    await executeCommandLine('echo "commit 1" > a.txt');
+    await executeCommandLine('git add a.txt');
+    const c1 = await executeCommandLine('git commit -m "first"');
+    const rootOid = c1.state.commits[0].oid;
+
+    await executeCommandLine('echo "commit 2" >> a.txt');
+    await executeCommandLine('git add a.txt');
+    await executeCommandLine('git commit -m "second"');
+
+    // Checkout commit OID -> detached HEAD
+    const detachRes = await executeCommandLine(`git checkout ${rootOid}`);
+    expect(detachRes.exitCode).toBe(0);
+    expect(detachRes.state.head.type).toBe('detached');
+
+    // Checkout main -> branch HEAD
+    const attachRes = await executeCommandLine('git checkout main');
+    expect(attachRes.exitCode).toBe(0);
+    expect(attachRes.state.head.type).toBe('branch');
+    expect(attachRes.state.head.target).toBe('main');
+  });
+
+  it('handles git reset --soft, --mixed, and --hard modes', async () => {
+    await executeCommandLine('git init');
+    await executeCommandLine('touch a.txt');
+    await executeCommandLine('echo "1" > a.txt');
+    await executeCommandLine('git add a.txt');
+    await executeCommandLine('git commit -m "c1"');
+
+    await executeCommandLine('echo "2" >> a.txt');
+    await executeCommandLine('git add a.txt');
+    await executeCommandLine('git commit -m "c2"');
+
+    // Reset soft
+    const softRes = await executeCommandLine('git reset --soft HEAD~1');
+    expect(softRes.exitCode).toBe(0);
+    expect(softRes.state.commits.length).toBe(1);
+
+    // Commit again
+    await executeCommandLine('git commit -m "c2-again"');
+
+    // Reset hard
+    const hardRes = await executeCommandLine('git reset --hard HEAD~1');
+    expect(hardRes.exitCode).toBe(0);
+    expect(hardRes.state.commits.length).toBe(1);
+  });
+
+  it('handles git tag, revert, cherry-pick, and rebase', async () => {
     await executeCommandLine('git init');
     await executeCommandLine('touch a.txt');
     await executeCommandLine('echo "initial a" > a.txt');
@@ -87,8 +151,21 @@ describe('Git Engine Workflow', () => {
       expect(cpRes.state.commits.some((c) => c.message.includes('cherry-picked'))).toBe(true);
     }
 
-    // Reset soft back
-    const resetRes = await executeCommandLine('git reset --soft HEAD~1');
-    expect(resetRes.exitCode).toBe(0);
+    // Revert latest commit
+    const revRes = await executeCommandLine('git revert HEAD');
+    expect(revRes.exitCode).toBe(0);
+    expect(revRes.state.commits.some((c) => c.message.startsWith('Revert'))).toBe(true);
+  });
+
+  it('handles filesystem commands: cat, touch, echo append', async () => {
+    await executeCommandLine('git init');
+    await executeCommandLine('echo "Hello CommitFlow" > greeting.txt');
+    const catRes = await executeCommandLine('cat greeting.txt');
+    expect(catRes.stdout).toContain('Hello CommitFlow');
+
+    await executeCommandLine('echo "Second Line" >> greeting.txt');
+    const cat2Res = await executeCommandLine('cat greeting.txt');
+    expect(cat2Res.stdout).toContain('Hello CommitFlow');
+    expect(cat2Res.stdout).toContain('Second Line');
   });
 });

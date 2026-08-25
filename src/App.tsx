@@ -169,6 +169,18 @@ export function App() {
     navigator.clipboard.writeText(url);
   };
 
+  // Keyboard shortcut listener for Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedCommit(null);
+        setShowExplanation(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className={styles.appContainer}>
       <Header
@@ -219,7 +231,7 @@ export function App() {
               />
             </div>
             <div className={styles.statePane}>
-              <StatePanel repoState={repoState} />
+              <StatePanel repoState={repoState} onAction={handleExecuteCommand} />
             </div>
           </div>
         </div>

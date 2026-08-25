@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { CommitInfo } from '../../model/types';
 import styles from './CommitInspector.module.css';
 
@@ -7,9 +8,27 @@ interface CommitInspectorProps {
 }
 
 export function CommitInspector({ commit, onClose }: CommitInspectorProps) {
+  const [copiedSha, setCopiedSha] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   if (!commit) return null;
 
-  const dateStr = new Date(commit.author.timestamp * 1000).toUTCString();
+  const dateStr = new Date(commit.author.timestamp * 1000).toLocaleString();
+
+  const handleCopySha = () => {
+    navigator.clipboard.writeText(commit.oid);
+    setCopiedSha(true);
+    setTimeout(() => setCopiedSha(false), 2000);
+  };
 
   return (
     <div className={styles.inspectorOverlay} onClick={onClose}>
@@ -21,7 +40,7 @@ export function CommitInspector({ commit, onClose }: CommitInspectorProps) {
               {commit.shortOid}
             </span>
           </div>
-          <button className={styles.closeButton} onClick={onClose}>
+          <button className={styles.closeButton} onClick={onClose} title="Close inspector (Esc)">
             ✕
           </button>
         </div>
@@ -29,7 +48,25 @@ export function CommitInspector({ commit, onClose }: CommitInspectorProps) {
         <div className={styles.modalBody}>
           <div className={styles.metaGrid}>
             <span className={styles.metaLabel}>Full SHA:</span>
-            <span className={styles.metaValue}>{commit.oid}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={styles.metaValue} style={{ wordBreak: 'break-all' }}>{commit.oid}</span>
+              <button
+                type="button"
+                onClick={handleCopySha}
+                style={{
+                  background: copiedSha ? '#16a34a' : '#334155',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {copiedSha ? '✓ Copied' : 'Copy'}
+              </button>
+            </div>
 
             <span className={styles.metaLabel}>Author:</span>
             <span className={styles.metaValue}>
@@ -39,13 +76,13 @@ export function CommitInspector({ commit, onClose }: CommitInspectorProps) {
             <span className={styles.metaLabel}>Date:</span>
             <span className={styles.metaValue}>{dateStr}</span>
 
-            <span className={styles.metaLabel}>Tree:</span>
+            <span className={styles.metaLabel}>Tree OID:</span>
             <span className={styles.metaValue}>{commit.treeOid}</span>
 
             <span className={styles.metaLabel}>Parents:</span>
             <div className={styles.parentList}>
               {commit.parentOids.length === 0 ? (
-                <span className={styles.metaValue}>Root commit (no parents)</span>
+                <span className={styles.metaValue}>Root commit (initial)</span>
               ) : (
                 commit.parentOids.map((p) => (
                   <span key={p} className={styles.parentPill}>
@@ -58,19 +95,23 @@ export function CommitInspector({ commit, onClose }: CommitInspectorProps) {
             {commit.branches.length > 0 && (
               <>
                 <span className={styles.metaLabel}>Branches:</span>
-                <span className={styles.metaValue}>{commit.branches.join(', ')}</span>
+                <span className={styles.metaValue}>
+                  {commit.branches.map((b) => `⎇ ${b}`).join(', ')}
+                </span>
               </>
             )}
 
             {commit.tags.length > 0 && (
               <>
                 <span className={styles.metaLabel}>Tags:</span>
-                <span className={styles.metaValue}>{commit.tags.join(', ')}</span>
+                <span className={styles.metaValue}>
+                  {commit.tags.map((t) => `🏷 ${t}`).join(', ')}
+                </span>
               </>
             )}
           </div>
 
-          <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', marginTop: '12px', marginBottom: '6px' }}>
             Commit Message
           </div>
           <div className={styles.commitMessage}>{commit.message}</div>

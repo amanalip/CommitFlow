@@ -3,9 +3,10 @@ import styles from './StatePanel.module.css';
 
 interface WorkingDirPanelProps {
   repoState: RepoState;
+  onAction?: (command: string) => void;
 }
 
-export function WorkingDirPanel({ repoState }: WorkingDirPanelProps) {
+export function WorkingDirPanel({ repoState, onAction }: WorkingDirPanelProps) {
   const unstaged = repoState.unstagedFiles;
   const untracked = repoState.untrackedFiles;
 
@@ -18,24 +19,48 @@ export function WorkingDirPanel({ repoState }: WorkingDirPanelProps) {
       {unstaged.map((file) => (
         <div key={file.path} className={styles.fileItem}>
           <span className={styles.filePath}>{file.path}</span>
-          <span
-            className={`${styles.statusPill} ${
-              file.status === 'modified'
-                ? styles.statusModified
-                : file.status === 'deleted'
-                ? styles.statusDeleted
-                : styles.statusAdded
-            }`}
-          >
-            {file.status}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span
+              className={`${styles.statusPill} ${
+                file.status === 'modified'
+                  ? styles.statusModified
+                  : file.status === 'deleted'
+                  ? styles.statusDeleted
+                  : styles.statusAdded
+              }`}
+            >
+              {file.status}
+            </span>
+            {onAction && (
+              <button
+                type="button"
+                className={styles.quickActionBtn}
+                onClick={() => onAction(`git add ${file.path}`)}
+                title={`Stage ${file.path}`}
+              >
+                + Stage
+              </button>
+            )}
+          </div>
         </div>
       ))}
 
       {untracked.map((path) => (
         <div key={path} className={styles.fileItem}>
           <span className={styles.filePath}>{path}</span>
-          <span className={`${styles.statusPill} ${styles.statusUntracked}`}>untracked</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span className={`${styles.statusPill} ${styles.statusUntracked}`}>untracked</span>
+            {onAction && (
+              <button
+                type="button"
+                className={styles.quickActionBtn}
+                onClick={() => onAction(`git add ${path}`)}
+                title={`Stage ${path}`}
+              >
+                + Stage
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

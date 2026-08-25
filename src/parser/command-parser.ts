@@ -49,6 +49,29 @@ export function tokenizeCommandLine(input: string): string[] {
   return tokens;
 }
 
+const KNOWN_BOOLEAN_FLAGS = new Set([
+  'soft',
+  'mixed',
+  'hard',
+  'all',
+  'oneline',
+  'graph',
+  'cached',
+  'tags',
+  'allow-empty',
+  'delete',
+  'force',
+  'version',
+  'help',
+  'bare',
+  'amend',
+  'no-edit',
+  'ff-only',
+  'no-ff',
+  'stat',
+  'patch',
+]);
+
 export function parseCommand(rawInput: string): ParsedCommand {
   const trimmed = rawInput.trim();
   if (!trimmed) {
@@ -60,24 +83,63 @@ export function parseCommand(rawInput: string): ParsedCommand {
     };
   }
 
-  // Check for shell redirects like: echo "text" > file or echo "text" >> file
-  const redirectMatch = trimmed.match(/^(echo\s+.*?)\s*(>>|>)\s*([^\s]+)$/);
-  if (redirectMatch) {
-    const echoPart = redirectMatch[1];
-    const isAppend = redirectMatch[2] === '>>';
-    const targetFile = redirectMatch[3];
-    const echoTokens = tokenizeCommandLine(echoPart);
-    const content = echoTokens.slice(1).join(' ');
+  // Check for shell redirects outside quotes
+  let redirectIndex = -1;
+  let isAppend = false;
+  let inDouble = false;
+  let inSingle = false;
+  let escape = false;
 
-    return {
-      raw: rawInput,
-      type: 'echo',
-      args: [targetFile],
-      flags: {},
-      targetFile,
-      fileContent: content + '\n',
-      append: isAppend,
-    };
+  for (let i = 0; i < trimmed.length; i++) {
+    const c = trimmed[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (c === '\\' && !inSingle) {
+      escape = true;
+      continue;
+    }
+    if (c === '"' && !inSingle) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (c === "'" && !inDouble) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (!inDouble && !inSingle) {
+      if (c === '>' && trimmed[i + 1] === '>') {
+        redirectIndex = i;
+        isAppend = true;
+        break;
+      } else if (c === '>') {
+        redirectIndex = i;
+        isAppend = false;
+        break;
+      }
+    }
+  }
+
+  if (redirectIndex !== -1) {
+    const leftPart = trimmed.slice(0, redirectIndex).trim();
+    const rightPart = trimmed.slice(redirectIndex + (isAppend ? 2 : 1)).trim();
+    const leftTokens = tokenizeCommandLine(leftPart);
+    const firstLeft = leftTokens[0];
+
+    if (firstLeft === 'echo') {
+      const content = leftTokens.slice(1).join(' ');
+      const targetFile = rightPart.split(/\s+/)[0];
+      return {
+        raw: rawInput,
+        type: 'echo',
+        args: [targetFile],
+        flags: {},
+        targetFile,
+        fileContent: content + '\n',
+        append: isAppend,
+      };
+    }
   }
 
   const tokens = tokenizeCommandLine(trimmed);
@@ -172,7 +234,9 @@ export function parseCommand(rawInput: string): ParsedCommand {
         flags[flagName] = flagVal;
       } else {
         const flagName = token.slice(2);
-        if (i + 1 < rest.length && !rest[i + 1].startsWith('-') && !['soft', 'mixed', 'hard', 'all', 'oneline', 'graph', 'cached', 'tags'].includes(flagName)) {
+        if (KNOWN_BOOLEAN_FLAGS.has(flagName)) {
+          flags[flagName] = true;
+        } else if (i + 1 < rest.length && !rest[i + 1].startsWith('-')) {
           flags[flagName] = rest[i + 1];
           i++;
         } else {
@@ -187,17 +251,19 @@ export function parseCommand(rawInput: string): ParsedCommand {
       } else if (flagName === 'b' && i + 1 < rest.length) {
         flags['b'] = rest[i + 1];
         i++;
+      } else if (flagName === 'c' && i + 1 < rest.length) {
+        flags['c'] = rest[i + 1];
+        i++;
       } else if (flagName === 'a' && i + 1 < rest.length && !rest[i + 1].startsWith('-') && subcommand === 'tag') {
         flags['a'] = rest[i + 1];
         i++;
-      } else if (flagName === 'd' && i + 1 < rest.length) {
+      } else if (flagName === 'd' && i + 1 < rest.length && !rest[i + 1].startsWith('-')) {
         flags['d'] = rest[i + 1];
         i++;
-      } else if (flagName === 'D' && i + 1 < rest.length) {
+      } else if (flagName === 'D' && i + 1 < rest.length && !rest[i + 1].startsWith('-')) {
         flags['D'] = rest[i + 1];
         i++;
       } else {
-        // Individual char flags or combined flags
         for (const char of flagName) {
           flags[char] = true;
         }

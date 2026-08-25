@@ -199,7 +199,31 @@ export async function snapshotRepoState(): Promise<RepoState> {
     }
   }
 
-  const commits = Array.from(commitMap.values());
+  // Sort commits topologically: oldest roots first, advancing to newest
+  const rawCommits = Array.from(commitMap.values());
+  const commitIndices = new Map<string, number>();
+  rawCommits.sort((a, b) => a.author.timestamp - b.author.timestamp);
+  rawCommits.forEach((c, idx) => commitIndices.set(c.oid, idx));
+
+  // Ensure topological parent-before-child ordering
+  const sortedCommits: CommitInfo[] = [];
+  const visited = new Set<string>();
+
+  function visit(commit: CommitInfo) {
+    if (visited.has(commit.oid)) return;
+    for (const parentOid of commit.parentOids) {
+      const parent = commitMap.get(parentOid);
+      if (parent && !visited.has(parentOid)) {
+        visit(parent);
+      }
+    }
+    visited.add(commit.oid);
+    sortedCommits.push(commit);
+  }
+
+  for (const c of rawCommits) {
+    visit(c);
+  }
 
   const stagedFiles: WorkingFile[] = [];
   const unstagedFiles: WorkingFile[] = [];
@@ -261,7 +285,7 @@ export async function snapshotRepoState(): Promise<RepoState> {
     },
     branches,
     tags,
-    commits,
+    commits: sortedCommits,
     stagedFiles,
     unstagedFiles,
     untrackedFiles,
@@ -396,6 +420,8 @@ export async function executeBranch(args: {
 
 export async function executeCheckout(target: string, createBranch = false): Promise<string> {
   const fs = getFS();
+  const pfs = fs.promises;
+
   if (createBranch) {
     await git.branch({
       fs,
@@ -403,11 +429,13 @@ export async function executeCheckout(target: string, createBranch = false): Pro
       ref: target,
       checkout: true,
     });
+    await writeTextFile(pfs, `${REPO_DIR}/.git/HEAD`, `ref: refs/heads/${target}\n`);
     return `Switched to a new branch '${target}'`;
   }
 
   const branches = await git.listBranches({ fs, dir: REPO_DIR });
   if (branches.includes(target)) {
+    await writeTextFile(pfs, `${REPO_DIR}/.git/HEAD`, `ref: refs/heads/${target}\n`);
     await git.checkout({
       fs,
       dir: REPO_DIR,
@@ -418,6 +446,7 @@ export async function executeCheckout(target: string, createBranch = false): Pro
 
   try {
     const oid = await resolveCommitRef(target);
+    await writeTextFile(pfs, `${REPO_DIR}/.git/HEAD`, `${oid}\n`);
     await git.checkout({
       fs,
       dir: REPO_DIR,
@@ -509,7 +538,7 @@ export async function executeReset(targetRef: string, mode: 'soft' | 'mixed' | '
       force: true,
     });
   } else {
-    await writeTextFile(pfs, `${REPO_DIR}/.git/HEAD`, targetOid);
+    await writeTextFile(pfs, `${REPO_DIR}/.git/HEAD`, `${targetOid}\n`);
   }
 
   if (mode === 'hard') {
@@ -595,18 +624,6 @@ export async function executeRebase(upstreamBranch: string): Promise<string> {
   const upstreamOids = new Set(upstreamLogs.map((l) => l.oid));
 
   const commitsToReplay = currentLogs.filter((l) => !upstreamOids.has(l.oid)).reverse();
-
-  if (commitsToReplay.length === 0) {
-    await git.writeRef({
-      fs,
-      dir: REPO_DIR,
-      ref: `refs/heads/${current}`,
-      value: upstreamOid,
-      force: true,
-    });
-    await git.checkout({ fs, dir: REPO_DIR, ref: current, force: true });
-    return `Successfully rebased and updated refs/heads/${current}.`;
-  }
 
   await git.writeRef({
     fs,
