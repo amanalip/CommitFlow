@@ -57,7 +57,7 @@
 
 .nodeHeadActive {
   border-color: #38bdf8;
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.24);
 }
 
 .headerRow {
@@ -89,12 +89,6 @@
   background: #38bdf8;
   color: #0f172a;
   letter-spacing: 0.35px;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -114,6 +108,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.messageExpanded {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .author {

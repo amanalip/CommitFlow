@@ -1,13 +1,15 @@
 import React, { memo, useState } from 'react';
 import { Handle, NodeToolbar, Position, NodeProps } from '@xyflow/react';
-import { Check, Copy, Eye, GitCommitHorizontal, GitMerge } from 'lucide-react';
+import { Check, Copy, Eye, GitCommitHorizontal, GitMerge, Tag } from 'lucide-react';
 import { CommitNodeData } from '../layout/graph-layout';
+import { copyText } from '../utils/clipboard';
 import styles from './CommitNode.module.css';
 
 export const CommitNode = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as unknown as CommitNodeData;
   const { commit, color, isHead, branches, tags, onSelectCommit } = nodeData;
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [messageExpanded, setMessageExpanded] = useState(false);
   const commitDate = new Date(commit.author.timestamp * 1000);
   const dateLabel = commitDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   const timeLabel = commitDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -31,16 +33,21 @@ export const CommitNode = memo(({ data, selected }: NodeProps) => {
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(commit.oid);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    try {
+      await copyText(commit.oid);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+    window.setTimeout(() => setCopyStatus('idle'), 1800);
   };
 
   return (
     <>
       <NodeToolbar position={Position.Top} offset={10} className={styles.nodeToolbar}>
         <button type="button" onClick={handleClick}><Eye size={14} aria-hidden="true" /> Inspect commit</button>
-        <button type="button" onClick={handleCopy}>{copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}{copied ? 'Copied' : 'Copy ID'}</button>
+        <button type="button" onClick={handleCopy}>{copyStatus === 'copied' ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}{copyStatus === 'copied' ? 'Copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy ID'}</button>
+        {commit.message.length > 52 && <button type="button" onClick={() => setMessageExpanded((value) => !value)} aria-expanded={messageExpanded}>{messageExpanded ? 'Collapse message' : 'Read full message'}</button>}
       </NodeToolbar>
       <div
         className={`${styles.nodeCard} ${isHead ? styles.nodeHeadActive : ''} ${selected ? styles.nodeSelected : ''}`}
@@ -68,7 +75,7 @@ export const CommitNode = memo(({ data, selected }: NodeProps) => {
           <span className={styles.shaBadge}>{commit.shortOid}</span>
         </div>
 
-        <div className={styles.message} title={commit.message}>{commit.message}</div>
+        <div className={`${styles.message} ${messageExpanded ? styles.messageExpanded : ''}`} title={commit.message}>{commit.message}</div>
         <div className={styles.author}>by {commit.author.name}</div>
         <div className={styles.metaRow}>
           <span>{dateLabel} · {timeLabel}</span>
@@ -84,7 +91,7 @@ export const CommitNode = memo(({ data, selected }: NodeProps) => {
           ))}
           {tags.map((t) => (
             <span key={t} className={styles.tagBadge}>
-              🏷 {t}
+              <Tag size={10} aria-hidden="true" /> {t}
             </span>
           ))}
           </div>

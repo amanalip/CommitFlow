@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { encodeCommandHistoryToHash, decodeCommandHistoryFromHash } from '../src/share/url-codec';
+import LZString from 'lz-string';
 
 describe('URL Hash Codec', () => {
   it('compresses and decompresses command sequences', () => {
@@ -32,5 +33,12 @@ describe('URL Hash Codec', () => {
     const hash = encodeCommandHistoryToHash(commands);
     const decoded = decodeCommandHistoryFromHash(hash);
     expect(decoded).toEqual(commands);
+  });
+
+  it('loads legacy arrays and rejects unknown payload versions', () => {
+    const legacy = LZString.compressToEncodedURIComponent(JSON.stringify(['git init']));
+    const future = LZString.compressToEncodedURIComponent(JSON.stringify({ version: 99, commands: ['git init'] }));
+    expect(decodeCommandHistoryFromHash(legacy)).toEqual(['git init']);
+    expect(decodeCommandHistoryFromHash(future)).toEqual([]);
   });
 });

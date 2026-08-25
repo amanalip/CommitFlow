@@ -1,12 +1,14 @@
 import { RepoState } from '../../model/types';
+import { Tag } from 'lucide-react';
 import styles from './StatePanel.module.css';
 
 interface BranchListPanelProps {
   repoState: RepoState;
   onAction?: (command: string) => void;
+  onDestructiveAction?: (command: string, title: string, description: string) => void;
 }
 
-export function BranchListPanel({ repoState, onAction }: BranchListPanelProps) {
+export function BranchListPanel({ repoState, onAction, onDestructiveAction }: BranchListPanelProps) {
   const branches = repoState.branches;
   const tags = repoState.tags;
 
@@ -23,14 +25,10 @@ export function BranchListPanel({ repoState, onAction }: BranchListPanelProps) {
               {b.isCurrent && <span className={styles.currentBadge}>Current</span>}
             </div>
             {!b.isCurrent && onAction && (
-              <button
-                type="button"
-                className={styles.quickActionBtn}
-                onClick={() => onAction(`git checkout ${b.name}`)}
-                title={`Switch to ${b.name}`}
-              >
-                Switch
-              </button>
+              <div className={styles.rowActions}>
+                <button type="button" className={styles.quickActionBtn} onClick={() => onAction(`git checkout ${b.name}`)} title={`Run: git checkout ${b.name}`}>Switch</button>
+                {onDestructiveAction && <button type="button" className={styles.dangerActionBtn} onClick={() => onDestructiveAction(`git branch -d ${b.name}`, `Delete branch ${b.name}?`, 'Safe deletion succeeds only when the branch is fully merged. Commits reachable elsewhere remain available.')} title={`Run: git branch -d ${b.name}`}>Delete</button>}
+              </div>
             )}
           </div>
         ))}
@@ -44,9 +42,10 @@ export function BranchListPanel({ repoState, onAction }: BranchListPanelProps) {
           <div className={styles.itemList}>
             {tags.map((t) => (
               <div key={t.name} className={styles.tagItem}>
-                <span className={styles.tagIcon}>🏷</span>
+                <Tag className={styles.tagIcon} size={14} aria-hidden="true" />
                 <span className={styles.tagName}>{t.name}</span>
                 {t.oid && <span className={styles.tagOid}>{t.oid.slice(0, 7)}</span>}
+                {onDestructiveAction && <button type="button" className={styles.dangerActionBtn} onClick={() => onDestructiveAction(`git tag -d ${t.name}`, `Delete tag ${t.name}?`, 'This removes the tag name. The commit it points to is not deleted.')} title={`Run: git tag -d ${t.name}`}>Delete</button>}
               </div>
             ))}
           </div>

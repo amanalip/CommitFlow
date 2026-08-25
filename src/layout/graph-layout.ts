@@ -33,6 +33,7 @@ export function buildGraphLayout(
   }
 
   const { commitLanes, commitColumns } = computeLanesAndColumns(commits);
+  const commitIds = new Set(commits.map((commit) => commit.oid));
   const nodes: Node<CommitNodeData>[] = [];
   const edges: Edge[] = [];
 
@@ -63,7 +64,7 @@ export function buildGraphLayout(
     for (let pIdx = 0; pIdx < commit.parentOids.length; pIdx++) {
       const parentOid = commit.parentOids[pIdx];
       // Only draw edge if parent exists in our commit set
-      if (commits.some((c) => c.oid === parentOid)) {
+      if (commitIds.has(parentOid)) {
         const isPrimary = pIdx === 0;
         edges.push({
           id: `edge-${parentOid}-${commit.oid}`,

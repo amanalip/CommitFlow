@@ -32,4 +32,18 @@ describe('Scenarios Data Validation', () => {
       }
     }
   });
+
+  it('keeps every outcome command when adding guided review blocks', () => {
+    const requiredFinalCommands: Record<string, string> = {
+      'rebasing-a-feature': 'git rebase main',
+      'detached-head-recovery': 'git checkout experiment-branch',
+      'cherry-picking': 'git cherry-pick bugfix/hotfix',
+      'undoing-mistakes': 'git revert HEAD',
+      'stashing-work-in-progress': 'git commit -m "feat: add dashboard filters"',
+    };
+    for (const [scenarioId, command] of Object.entries(requiredFinalCommands)) {
+      const scenario = SCENARIOS.find((item) => item.id === scenarioId);
+      expect(scenario?.steps.some((step) => step.command === command), scenarioId).toBe(true);
+    }
+  });
 });

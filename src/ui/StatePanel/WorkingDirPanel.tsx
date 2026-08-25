@@ -5,9 +5,10 @@ import styles from './StatePanel.module.css';
 interface WorkingDirPanelProps {
   repoState: RepoState;
   onAction?: (command: string) => void;
+  onDestructiveAction?: (command: string, title: string, description: string) => void;
 }
 
-export function WorkingDirPanel({ repoState, onAction }: WorkingDirPanelProps) {
+export function WorkingDirPanel({ repoState, onAction, onDestructiveAction }: WorkingDirPanelProps) {
   const unstaged = repoState.unstagedFiles;
   const untracked = repoState.untrackedFiles;
   const totalCount = unstaged.length + untracked.length;
@@ -28,7 +29,7 @@ export function WorkingDirPanel({ repoState, onAction }: WorkingDirPanelProps) {
         </div>
       )}
 
-      {isEmpty && <div className={styles.emptyState}>Working directory is clean.</div>}
+      {isEmpty && <div className={styles.emptyState}>{repoState.initialized ? 'Working directory is clean.' : 'Repository not initialized. Start with git init.'}</div>}
 
       {unstaged.map((file) => (
         <div key={file.path} className={styles.fileItem}>
@@ -46,14 +47,30 @@ export function WorkingDirPanel({ repoState, onAction }: WorkingDirPanelProps) {
               {file.status}
             </span>
             {onAction && (
-              <button
-                type="button"
-                className={styles.quickActionBtn}
-                onClick={() => onAction(`git add ${quoteShellArg(file.path)}`)}
-                title={`Stage ${file.path}`}
-              >
-                + Stage
-              </button>
+              <>
+                {onDestructiveAction && (
+                  <button
+                    type="button"
+                    className={styles.dangerActionBtn}
+                    onClick={() => onDestructiveAction(
+                      `git restore ${quoteShellArg(file.path)}`,
+                      `Discard changes to ${file.path}?`,
+                      'This replaces the working copy with the version from HEAD. The discarded edit cannot be recovered in CommitFlow.',
+                    )}
+                    title={`Run: git restore ${quoteShellArg(file.path)}`}
+                  >
+                    Discard
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.quickActionBtn}
+                  onClick={() => onAction(`git add ${quoteShellArg(file.path)}`)}
+                  title={`Run: git add ${quoteShellArg(file.path)}`}
+                >
+                  + Stage
+                </button>
+              </>
             )}
           </div>
         </div>

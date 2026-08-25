@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
+import { Tag, X } from 'lucide-react';
 import { CommitInfo } from '../../model/types';
 import styles from './CommitInspector.module.css';
+import { copyText } from '../../utils/clipboard';
+import { useOverlayFocus } from '../useOverlayFocus';
 
 interface CommitInspectorProps {
   commit: CommitInfo | null;
@@ -10,26 +13,22 @@ interface CommitInspectorProps {
 }
 
 export function CommitInspector({ commit, allCommits = [], onSelectCommit, onClose }: CommitInspectorProps) {
-  const [copiedSha, setCopiedSha] = useState(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useOverlayFocus(dialogRef, onClose);
 
   if (!commit) return null;
 
   const dateStr = new Date(commit.author.timestamp * 1000).toLocaleString();
 
-  const handleCopySha = () => {
-    navigator.clipboard.writeText(commit.oid);
-    setCopiedSha(true);
-    setTimeout(() => setCopiedSha(false), 2000);
+  const handleCopySha = async () => {
+    try {
+      await copyText(commit.oid);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+    setTimeout(() => setCopyStatus('idle'), 2000);
   };
 
   const handleParentClick = (parentOid: string) => {
@@ -45,6 +44,7 @@ export function CommitInspector({ commit, allCommits = [], onSelectCommit, onClo
     <div className={styles.inspectorOverlay} onClick={onClose}>
       <div
         className={styles.inspectorModal}
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="commit-inspector-title"
@@ -57,8 +57,8 @@ export function CommitInspector({ commit, allCommits = [], onSelectCommit, onClo
               {commit.shortOid}
             </span>
           </div>
-          <button className={styles.closeButton} onClick={onClose} title="Close inspector (Esc)">
-            ✕
+          <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Close commit inspector">
+            <X size={17} aria-hidden="true" />
           </button>
         </div>
 
@@ -70,8 +70,9 @@ export function CommitInspector({ commit, allCommits = [], onSelectCommit, onClo
               <button
                 type="button"
                 onClick={handleCopySha}
+                aria-live="polite"
                 style={{
-                  background: copiedSha ? '#16a34a' : '#334155',
+                  background: copyStatus === 'copied' ? '#16a34a' : copyStatus === 'error' ? '#dc2626' : '#334155',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '4px',
@@ -81,7 +82,7 @@ export function CommitInspector({ commit, allCommits = [], onSelectCommit, onClo
                   whiteSpace: 'nowrap',
                 }}
               >
-                {copiedSha ? '✓ Copied' : 'Copy'}
+                {copyStatus === 'copied' ? 'Copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy'}
               </button>
             </div>
 
@@ -129,7 +130,7 @@ export function CommitInspector({ commit, allCommits = [], onSelectCommit, onClo
               <>
                 <span className={styles.metaLabel}>Tags:</span>
                 <span className={styles.metaValue}>
-                  {commit.tags.map((t) => `🏷 ${t}`).join(', ')}
+                  {commit.tags.map((tag) => <span key={tag} className={styles.inlineRef}><Tag size={12} aria-hidden="true" />{tag}</span>)}
                 </span>
               </>
             )}

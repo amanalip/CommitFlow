@@ -4,14 +4,20 @@ import styles from './StatePanel.module.css';
 interface StashPanelProps {
   repoState: RepoState;
   onAction?: (command: string) => void;
+  onDestructiveAction?: (command: string, title: string, description: string) => void;
 }
 
-export function StashPanel({ repoState, onAction }: StashPanelProps) {
+export function StashPanel({ repoState, onAction, onDestructiveAction }: StashPanelProps) {
   const stashes = repoState.stashes || [];
   const isEmpty = stashes.length === 0;
 
   return (
     <div className={styles.fileList}>
+      {!isEmpty && onDestructiveAction && (
+        <div className={styles.listActions}>
+          <button type="button" className={styles.dangerActionBtn} onClick={() => onDestructiveAction('git stash clear', 'Clear every stash?', 'All saved stash entries will be removed. Their file changes cannot be recovered in CommitFlow.')} title="Run: git stash clear">Clear all</button>
+        </div>
+      )}
       {isEmpty && (
         <div className={styles.emptyState}>
           No stashes saved. Use <code>git stash</code> to save uncommitted changes.
@@ -37,6 +43,9 @@ export function StashPanel({ repoState, onAction }: StashPanelProps) {
               >
                 Pop
               </button>
+              {onDestructiveAction && (
+                <button type="button" className={styles.dangerActionBtn} onClick={() => onDestructiveAction(`git stash drop stash@{${stash.index}}`, `Drop stash@{${stash.index}}?`, 'This removes the saved entry without restoring its files.')} title={`Run: git stash drop stash@{${stash.index}}`}>Drop</button>
+              )}
             </div>
           )}
         </div>

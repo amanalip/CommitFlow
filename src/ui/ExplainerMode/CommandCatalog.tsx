@@ -37,10 +37,13 @@ export function CommandCatalog({ selectedId, disabled, onSelect }: CommandCatalo
         <Search size={15} aria-hidden="true" />
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search command or concept" />
       </label>
-      <div className={styles.filterRow} aria-label="Filter examples by difficulty">
-        {(['All', 'Beginner', 'Intermediate', 'Advanced'] as const).map((item) => (
-          <button type="button" key={item} className={difficulty === item ? styles.filterActive : ''} onClick={() => setDifficulty(item)} aria-pressed={difficulty === item}>{item}</button>
-        ))}
+      <div className={styles.filterSection}>
+        <span className={styles.filterLabel}>Difficulty</span>
+        <div className={styles.filterRow} aria-label="Filter examples by difficulty">
+          {(['All', 'Beginner', 'Intermediate', 'Advanced'] as const).map((item) => (
+            <button type="button" key={item} className={difficulty === item ? styles.filterActive : ''} onClick={() => setDifficulty(item)} aria-pressed={difficulty === item}>{item}</button>
+          ))}
+        </div>
       </div>
       <div className={styles.catalogList}>
         {Array.from(grouped.entries()).map(([category, presets]) => (

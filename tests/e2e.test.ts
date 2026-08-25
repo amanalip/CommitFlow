@@ -27,6 +27,15 @@ describe('Browser End-to-End Test', () => {
     expect(await page.getByText('Your commit history will appear here').isVisible()).toBe(true);
     expect(await page.getByRole('button', { name: 'Zoom in' }).count()).toBe(1);
     expect(await page.getByRole('button', { name: 'Zoom out' }).count()).toBe(1);
+    expect(await page.getByRole('separator', { name: 'Resize graph and lower workspace' }).isVisible()).toBe(true);
+    expect(await page.getByRole('separator', { name: 'Resize terminal and repository panes' }).isVisible()).toBe(true);
+
+    const graphSeparator = page.getByRole('separator', { name: 'Resize graph and lower workspace' });
+    await graphSeparator.focus();
+    await page.keyboard.press('ArrowUp');
+    expect(await graphSeparator.getAttribute('aria-valuenow')).toBe('53');
+    await page.getByRole('button', { name: /Default layout/ }).click();
+    expect(await graphSeparator.getAttribute('aria-valuenow')).toBe('55');
 
     await page.getByRole('button', { name: 'Export' }).click();
     expect(await page.getByRole('menuitem', { name: 'PNG image' }).isVisible()).toBe(true);
@@ -71,21 +80,30 @@ describe('Browser End-to-End Test', () => {
     await page.keyboard.press('Enter');
     expect(await page.getByRole('dialog').isVisible()).toBe(true);
     await page.keyboard.press('Escape');
+    expect(await accessibleCommit.evaluate((element) => element === document.activeElement)).toBe(true);
 
     // Theme changes must update xterm in place without erasing scrollback.
     const terminalRows = page.locator('.xterm-rows');
     expect(await terminalRows.innerText()).toContain('initial commit');
-    await page.getByTitle('Switch to light mode').click();
+    await page.getByRole('button', { name: 'Switch to light theme' }).click();
     await page.waitForTimeout(200);
     expect(await terminalRows.innerText()).toContain('initial commit');
     expect((await terminalRows.innerText()).match(/CommitFlow Terminal/g)?.length).toBe(1);
 
     // Reset clears both repository state and terminal state.
-    await page.getByRole('button', { name: /Reset/ }).click();
+    await page.getByRole('button', { name: 'Reset Playground to an empty repository' }).click();
+    const resetConfirmation = page.getByRole('button', { name: 'Reset Playground', exact: true });
+    expect(await page.getByRole('button', { name: 'Cancel' }).evaluate((element) => element === document.activeElement)).toBe(true);
+    await resetConfirmation.click();
     await page.waitForTimeout(300);
     expect(await page.locator('.react-flow__node').count()).toBe(0);
     expect(await terminalRows.innerText()).not.toContain('initial commit');
     expect(await terminalRows.innerText()).toContain('CommitFlow Terminal');
+
+    const workingTab = page.getByRole('tab', { name: 'Working Directory' });
+    await workingTab.focus();
+    await page.keyboard.press('ArrowRight');
+    expect(await page.getByRole('tab', { name: 'Staging Area' }).getAttribute('aria-selected')).toBe('true');
 
     // The learning browser exposes deep lesson metadata and scenario steps echo in the terminal.
     await page.getByRole('button', { name: /Learning scenarios 42/ }).click();
@@ -103,7 +121,8 @@ describe('Browser End-to-End Test', () => {
     expect(await page.getByText(/1 of \d+ complete/).isVisible()).toBe(true);
     expect(await terminalRows.innerText()).toContain('git init');
 
-    await page.getByRole('button', { name: /Reset/ }).click();
+    await page.getByRole('button', { name: 'Reset Playground to an empty repository' }).click();
+    await page.getByRole('button', { name: 'Reset Playground', exact: true }).click();
     await page.waitForTimeout(200);
 
     // insertText sends a complete data chunk, matching browser paste behavior.
@@ -127,7 +146,7 @@ describe('Browser End-to-End Test', () => {
     expect(await page.locator('.react-flow__node').innerText()).toContain('preserved playground');
 
     // Switch to Explainer mode
-    const explainerBtn = page.getByRole('button', { name: 'Explainer' });
+    const explainerBtn = page.getByRole('tab', { name: 'Explainer' });
     await explainerBtn.click();
     await page.waitForTimeout(1000);
     expect(await page.getByRole('alert').count()).toBe(0);
@@ -137,6 +156,7 @@ describe('Browser End-to-End Test', () => {
     expect(await page.getByRole('region', { name: 'Before and after state comparison' }).isVisible()).toBe(true);
     expect(await page.getByText('2 repository effects').isVisible()).toBe(true);
     expect(await page.getByText('Command anatomy').isVisible()).toBe(true);
+    expect(await page.getByText('Difficulty', { exact: true }).isVisible()).toBe(true);
 
     const explainerCommit = page.locator('#commitflow-before-graph').getByRole('button', { name: /Inspect commit/ }).first();
     await explainerCommit.focus();
@@ -145,7 +165,7 @@ describe('Browser End-to-End Test', () => {
     await page.keyboard.press('Escape');
 
     const selectedExplainerCommand = page.getByRole('textbox', { name: 'Command to simulate' });
-    await page.getByTitle('Switch to dark mode').click();
+    await page.getByRole('button', { name: 'Switch to dark theme' }).click();
     expect(await selectedExplainerCommand.inputValue()).toBe('git checkout -b feature/auth');
 
     await page.getByPlaceholder('Search command or concept').fill('initialize');
@@ -153,7 +173,7 @@ describe('Browser End-to-End Test', () => {
     await page.getByText('No repository exists yet').waitFor({ state: 'visible' });
     expect(await page.getByText('Repository ready, with no commits yet').isVisible()).toBe(true);
 
-    const playgroundBtn = page.getByRole('button', { name: 'Playground' });
+    const playgroundBtn = page.getByRole('tab', { name: 'Playground' });
     await page.waitForFunction(() => {
       const button = Array.from(document.querySelectorAll('button')).find(
         (candidate) => candidate.textContent?.trim() === 'Playground'
@@ -164,10 +184,8 @@ describe('Browser End-to-End Test', () => {
     await page.waitForTimeout(300);
     expect(await page.locator('.react-flow__node').innerText()).toContain('preserved playground');
 
-    // Verify footer and github link
-    const footerText = await page.locator('footer').innerText();
-    expect(footerText).toContain('Aman Ali Pogaku');
-
+    // Verify source repository link remains available after removing the workspace footer.
+    expect(await page.locator('footer').count()).toBe(0);
     const githubLink = page.locator('header a[href="https://github.com/amanalip/CommitFlow"]');
     expect(await githubLink.isVisible()).toBe(true);
 

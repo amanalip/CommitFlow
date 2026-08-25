@@ -416,6 +416,22 @@ export async function executeInit(defaultBranch = 'main'): Promise<string> {
   return `Initialized empty Git repository in ${REPO_DIR}/.git/`;
 }
 
+async function stageWorkingFile(filepath: string): Promise<void> {
+  const fs = getFS();
+  const pfs = fs.promises;
+  const data = await pfs.readFile(`${REPO_DIR}/${filepath}`);
+  const blob = data instanceof Uint8Array ? data : Buffer.from(data);
+  const oid = await git.writeBlob({ fs, dir: REPO_DIR, blob });
+  await git.updateIndex({
+    fs,
+    dir: REPO_DIR,
+    filepath,
+    oid,
+    mode: 0o100644,
+    add: true,
+  });
+}
+
 export async function executeAdd(filepaths: string[]): Promise<string> {
   const fs = getFS();
   const pfs = fs.promises;
@@ -426,7 +442,7 @@ export async function executeAdd(filepaths: string[]): Promise<string> {
       if (workdirStatus === 0) {
         await git.remove({ fs, dir: REPO_DIR, filepath });
       } else {
-        await git.add({ fs, dir: REPO_DIR, filepath });
+        await stageWorkingFile(filepath);
       }
     }
   } else {
@@ -437,10 +453,10 @@ export async function executeAdd(filepaths: string[]): Promise<string> {
         if (stat.isDirectory()) {
           const files = await listAllFiles(pfs, REPO_DIR, cleanFile);
           for (const sub of files) {
-            await git.add({ fs, dir: REPO_DIR, filepath: sub });
+            await stageWorkingFile(sub);
           }
         } else {
-          await git.add({ fs, dir: REPO_DIR, filepath: cleanFile });
+          await stageWorkingFile(cleanFile);
         }
       } catch {
         try {
@@ -818,6 +834,87 @@ async function readCommitFiles(commitOid?: string): Promise<Map<string, Uint8Arr
   return files;
 }
 
+async function readWorkingFiles(): Promise<Map<string, Uint8Array>> {
+  const fs = getFS();
+  const pfs = fs.promises;
+  const files = new Map<string, Uint8Array>();
+  for (const filepath of await listAllFiles(pfs, REPO_DIR)) {
+    const content = await pfs.readFile(`${REPO_DIR}/${filepath}`);
+    files.set(filepath, content instanceof Uint8Array ? content : Buffer.from(content));
+  }
+  return files;
+}
+
+async function restoreCommitTree(commitOid: string): Promise<void> {
+  const fs = getFS();
+  const pfs = fs.promises;
+  const targetFiles = await readCommitFiles(commitOid);
+  const currentFiles = await listAllFiles(pfs, REPO_DIR);
+
+  try {
+    await pfs.unlink(`${REPO_DIR}/.git/index`);
+  } catch (error: any) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+
+  for (const filepath of currentFiles) {
+    if (targetFiles.has(filepath)) continue;
+    try {
+      await pfs.unlink(`${REPO_DIR}/${filepath}`);
+    } catch (error: any) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+  }
+
+  for (const [filepath, content] of targetFiles) {
+    const parentDir = filepath.includes('/')
+      ? `${REPO_DIR}/${filepath.slice(0, filepath.lastIndexOf('/'))}`
+      : REPO_DIR;
+    await ensureDir(pfs, parentDir);
+    await pfs.writeFile(`${REPO_DIR}/${filepath}`, content);
+    await stageWorkingFile(filepath);
+  }
+}
+
+interface TreeBuildNode {
+  files: Map<string, Uint8Array>;
+  directories: Map<string, TreeBuildNode>;
+}
+
+async function writeFileMapTree(files: Map<string, Uint8Array>): Promise<string> {
+  const fs = getFS();
+  const root: TreeBuildNode = { files: new Map(), directories: new Map() };
+
+  for (const [filepath, content] of files) {
+    const parts = filepath.split('/');
+    const filename = parts.pop()!;
+    let node = root;
+    for (const part of parts) {
+      if (!node.directories.has(part)) {
+        node.directories.set(part, { files: new Map(), directories: new Map() });
+      }
+      node = node.directories.get(part)!;
+    }
+    node.files.set(filename, content);
+  }
+
+  const writeNode = async (node: TreeBuildNode): Promise<string> => {
+    const entries: Array<{ mode: string; path: string; oid: string; type: 'blob' | 'tree' }> = [];
+    for (const [path, content] of node.files) {
+      const oid = await git.writeBlob({ fs, dir: REPO_DIR, blob: content });
+      entries.push({ mode: '100644', path, oid, type: 'blob' });
+    }
+    for (const [path, child] of node.directories) {
+      const oid = await writeNode(child);
+      entries.push({ mode: '040000', path, oid, type: 'tree' });
+    }
+    entries.sort((a, b) => a.path.localeCompare(b.path));
+    return git.writeTree({ fs, dir: REPO_DIR, tree: entries });
+  };
+
+  return writeNode(root);
+}
+
 async function applyCommitDelta(fromCommitOid: string | undefined, toCommitOid: string | undefined): Promise<void> {
   const fs = getFS();
   const pfs = fs.promises;
@@ -851,7 +948,7 @@ async function applyCommitDelta(fromCommitOid: string | undefined, toCommitOid: 
       : REPO_DIR;
     await ensureDir(pfs, parentDir);
     await pfs.writeFile(`${REPO_DIR}/${filepath}`, newContent);
-    await git.add({ fs, dir: REPO_DIR, filepath });
+    await stageWorkingFile(filepath);
   }
 }
 
@@ -905,8 +1002,8 @@ export async function executeRebase(upstreamBranch: string): Promise<string> {
     throw new Error('Cannot rebase in detached HEAD state');
   }
 
-  const currentOid = await resolveCommitRef(current);
-  const upstreamOid = await resolveCommitRef(upstreamBranch);
+  const currentOid = await git.resolveRef({ fs, dir: REPO_DIR, ref: `refs/heads/${current}` });
+  const upstreamOid = await git.resolveRef({ fs, dir: REPO_DIR, ref: `refs/heads/${upstreamBranch}` });
 
   if (currentOid === upstreamOid) {
     return `Current branch ${current} is up to date.`;
@@ -918,6 +1015,8 @@ export async function executeRebase(upstreamBranch: string): Promise<string> {
 
   const commitsToReplay = currentLogs.filter((l) => !upstreamOids.has(l.oid)).reverse();
 
+  await git.checkout({ fs, dir: REPO_DIR, ref: upstreamBranch, force: true });
+  const rebasedFiles = await readWorkingFiles();
   await git.writeRef({
     fs,
     dir: REPO_DIR,
@@ -929,15 +1028,30 @@ export async function executeRebase(upstreamBranch: string): Promise<string> {
 
   for (const item of commitsToReplay) {
     const original = await git.readCommit({ fs, dir: REPO_DIR, oid: item.oid });
-    await applyCommitDelta(original.commit.parent[0], item.oid);
+    const [beforeFiles, afterFiles] = await Promise.all([
+      readCommitFiles(original.commit.parent[0]),
+      readCommitFiles(item.oid),
+    ]);
+    for (const filepath of new Set([...beforeFiles.keys(), ...afterFiles.keys()])) {
+      const before = beforeFiles.get(filepath);
+      const after = afterFiles.get(filepath);
+      const unchanged = before && after && Buffer.from(before).equals(Buffer.from(after));
+      if (unchanged) continue;
+      if (after === undefined) rebasedFiles.delete(filepath);
+      else rebasedFiles.set(filepath, after);
+    }
+    const tree = await writeFileMapTree(rebasedFiles);
     await git.commit({
       fs,
       dir: REPO_DIR,
       message: item.commit.message,
       author: item.commit.author,
       committer: defaultAuthor,
+      tree,
     });
   }
+
+  await restoreCommitTree(await resolveCommitRef(current));
 
   return `Successfully rebased and updated refs/heads/${current}.`;
 }
@@ -1038,7 +1152,7 @@ export async function executeStash(
       const indexContent = popped.indexFiles[path];
       if (indexContent !== undefined) {
         await writeTextFile(pfs, `${REPO_DIR}/${path}`, indexContent);
-        await git.add({ fs, dir: REPO_DIR, filepath: path });
+        await stageWorkingFile(path);
       } else {
         try {
           await git.remove({ fs, dir: REPO_DIR, filepath: path });
@@ -1061,6 +1175,17 @@ export async function executeStash(
       }
     }
     return `Dropped stash@{${stashIndex}} (${popped.message})`;
+  }
+
+  if (subcommand === 'drop') {
+    if (stashList.length === 0) throw new Error('No stash entries found.');
+    const match = reference?.match(/^stash@\{(\d+)\}$/);
+    const stashIndex = match ? Number(match[1]) : 0;
+    if (!Number.isInteger(stashIndex) || stashIndex < 0 || stashIndex >= stashList.length) {
+      throw new Error(`fatal: '${reference}' is not a valid stash reference`);
+    }
+    const [dropped] = stashList.splice(stashIndex, 1);
+    return `Dropped stash@{${stashIndex}} (${dropped.message})`;
   }
 
   if (subcommand === 'clear') {

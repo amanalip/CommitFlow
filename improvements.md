@@ -6,10 +6,10 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 - [x] Batch 1, command correctness: serialize repository mutations, enforce safe branch deletion, and make stash state and stash references accurate.
 - [x] Batch 2, playback and replay state: cancel playback during mode changes and Reset, prevent shared-history races, and keep Step Back explanations synchronized.
-- [ ] Batch 3, terminal and destructive-action safety: validate multiline and quoted paste, then add clear confirmation patterns for destructive operations.
-- [ ] Batch 4, accessibility and reliability: complete tab semantics, focus management, ARIA, keyboard navigation, contrast, clipboard errors, and share errors.
-- [ ] Batch 5, graph and workspace polish: refit after real container resizes, improve long-message inspection, and add persistent resizable panes.
-- [ ] Batch 6, documentation and performance: update product documentation, lazy-load suitable features, and split the remaining large JavaScript bundle.
+- [x] Batch 3, terminal and destructive-action safety: validate multiline and quoted paste, then add clear confirmation patterns for destructive operations.
+- [x] Batch 4, accessibility and reliability: complete tab semantics, focus management, ARIA, keyboard navigation, contrast, clipboard errors, and share errors.
+- [x] Batch 5, graph and workspace polish: refit after real container resizes, improve long-message inspection, and add persistent resizable panes.
+- [x] Batch 6, documentation and performance: update product documentation, lazy-load suitable features, and split the remaining large JavaScript bundle.
 
 ## P0: Repository and command correctness
 
@@ -92,6 +92,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Raise dark-mode secondary and muted text contrast so explanations, metadata, comparison rows, and catalog descriptions remain readable.
 - [x] Increase the smallest Explainer teaching text instead of using low-contrast 7px and 8px content for meaningful information.
 - [x] Fix difficulty filter pills so every label is vertically centered and contained inside its outline.
+- [x] Separate the Explainer difficulty filters from the search field with a labelled control group and deliberate spacing.
 
 ## P1: Terminal visual treatment
 
@@ -104,7 +105,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Give the terminal header a deliberate surface contrast from the terminal body in both themes.
 - [x] Restyle the scrollbar to match the selected theme.
 - [x] Improve terminal selection colors and cursor visibility in both themes.
-- [ ] Standardize the terminal title, window dots, Clear action, padding, and typography with the rest of the application.
+- [x] Standardize the terminal title, window dots, Clear action, padding, and typography with the rest of the application.
 
 ## P1: Graph usability and appearance
 
@@ -115,9 +116,9 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Pass the active theme background into PNG and SVG export instead of hard-coding dark navy.
 - [x] Exclude UI controls from exported graph images unless explicitly requested.
 - [x] Show export progress, success, and failure feedback.
-- [ ] Use stable, descriptive export filenames.
+- [x] Use stable, descriptive export filenames.
 - [x] Set a maximum fit zoom near `1` so short histories remain readable instead of shrinking excessively.
-- [ ] Refit when the graph container changes size.
+- [x] Refit when the graph container changes size.
 - [x] Avoid resetting the viewport after every repository update when the user has manually panned or zoomed.
 - [x] Add a Follow HEAD option for users who want automatic viewport movement.
 - [x] Make the minimap pannable and zoomable so it can navigate long or branched histories.
@@ -126,22 +127,22 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Use a React Flow node toolbar for contextual Inspect and Copy ID actions.
 - [x] Enrich commit tiles with object type, SHA label, author, timestamp, parent count, refs, and selection guidance.
 - [x] Increase commit-node text to at least 12px for primary information.
-- [ ] Improve long commit-message handling with a readable tooltip or expandable node rather than relying only on truncation.
-- [ ] Reduce excessive node glow and continuous HEAD pulsing.
+- [x] Improve long commit-message handling with a readable tooltip or expandable node rather than relying only on truncation.
+- [x] Reduce excessive node glow and continuous HEAD pulsing.
 - [x] Respect `prefers-reduced-motion` for HEAD animation and graph transitions.
 - [x] Make commit nodes keyboard-focusable and operable with Enter and Space.
 - [x] Add clear focus and selected states that are distinct from hover.
-- [ ] Use a commit lookup set in layout generation instead of repeated `commits.some` scans.
-- [ ] Document or remove the silent 100-commit history limit.
+- [x] Use a commit lookup set in layout generation instead of repeated `commits.some` scans.
+- [x] Document or remove the silent 100-commit history limit.
 
 ## P1: Desktop workspace layout
 
-- [ ] Add horizontal and vertical resize handles between graph, terminal, and repository-state panes.
-- [ ] Persist pane sizes in local storage.
-- [ ] Provide a Restore Default Layout action.
-- [ ] Allow the terminal and state pane to be maximized temporarily.
+- [x] Add horizontal and vertical resize handles between graph, terminal, and repository-state panes.
+- [x] Persist pane sizes in local storage.
+- [x] Provide a Restore Default Layout action.
+- [x] Allow the terminal and state pane to be maximized temporarily.
 - [ ] Reduce the large unused canvas area when the repository contains only one or two commits.
-- [ ] Remove the fixed copyright footer from the primary workspace or move attribution into an About menu.
+- [x] Remove the fixed copyright footer from the primary workspace or move attribution into an About menu.
 - [ ] Keep important controls aligned to a consistent desktop grid.
 - [ ] Prevent header wrapping at supported desktop widths by moving secondary actions into a menu if needed.
 
@@ -153,7 +154,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Add an Open Command Reference action.
 - [ ] Show a short three-step getting-started card for initializing, staging, and committing.
 - [ ] Make starter commands clickable or copyable.
-- [ ] Show “Repository not initialized” in state panels instead of “Working directory is clean” before `git init`.
+- [x] Show “Repository not initialized” in state panels instead of “Working directory is clean” before `git init`.
 - [ ] Give every empty state a useful next action instead of presenting only status text.
 
 ## P1: Scenario learning experience
@@ -176,7 +177,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Use readable playback delays so intermediate state changes remain visible.
 - [x] Replace raw millisecond speed values with learner-friendly pacing labels.
 - [x] Add a true divergent merge scenario that creates and visualizes a merge commit with two parents.
-- [ ] Verify that the cherry-pick, rebase, detached HEAD, undo, and stash lessons teach correct file-state behavior.
+- [x] Verify that the cherry-pick, rebase, detached HEAD, undo, and stash lessons teach correct file-state behavior.
 - [ ] Avoid rebuilding every previous step during Step Back by using engine checkpoints or repository snapshots.
 - [x] Preserve commit IDs when moving backward and forward through already-executed scenario steps.
 - [x] Explain when Git intentionally creates new commit IDs during commit, amend, revert, cherry-pick, and rebase.
@@ -190,29 +191,29 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 - [x] Change individual Unstage to `git restore --staged <file>`.
 - [x] Shell-quote filenames used in quick actions so paths containing spaces work.
-- [ ] Show the command a quick action will run in a tooltip or secondary label.
-- [ ] Display command output or failure when a quick action runs.
-- [ ] Add confirmation for destructive actions such as discarding changes, hard reset, branch deletion, and stash drop.
+- [x] Show the command a quick action will run in a tooltip or secondary label.
+- [x] Display command output or failure when a quick action runs.
+- [x] Add confirmation for destructive actions such as discarding changes, hard reset, branch deletion, and stash drop.
 - [ ] Add useful branch actions such as create, rename, copy name, and delete where supported.
 - [ ] Add stash apply, pop, drop, and clear actions with the correct stash reference.
 - [ ] Add tag copy and delete actions where supported.
 - [ ] Improve file rows with consistent status icons, labels, truncation, and full-path tooltips.
-- [ ] Use correct ARIA tab roles for Working Directory, Staging Area, Branches and Tags, and Stashes.
-- [ ] Support arrow-key navigation between state tabs.
+- [x] Use correct ARIA tab roles for Working Directory, Staging Area, Branches and Tags, and Stashes.
+- [x] Support arrow-key navigation between state tabs.
 
 ## P1: Sharing, reset, and feedback
 
-- [ ] Await clipboard writes before reporting success.
-- [ ] Show a useful error if clipboard access is denied or unavailable.
-- [ ] Disable Share when there is no reproducible Playground history.
-- [ ] Ensure the shared URL represents the repository currently visible to the user.
-- [ ] Add a version field to shared-history payloads for future compatibility.
-- [ ] Show replay progress while loading a shared URL.
+- [x] Await clipboard writes before reporting success.
+- [x] Show a useful error if clipboard access is denied or unavailable.
+- [x] Disable Share when there is no reproducible Playground history.
+- [x] Ensure the shared URL represents the repository currently visible to the user.
+- [x] Add a version field to shared-history payloads for future compatibility.
+- [x] Show replay progress while loading a shared URL.
 - [x] Lock or queue new commands until shared-history replay completes.
-- [ ] Prevent Reset from racing with active commands or replay.
-- [ ] Confirm Reset when meaningful work will be discarded.
+- [x] Prevent Reset from racing with active commands or replay.
+- [x] Confirm Reset when meaningful work will be discarded.
 - [ ] Use a consistent toast system for copy, export, reset, staging, branch switching, and failures.
-- [ ] Use `aria-live` regions for transient success and error feedback.
+- [x] Use `aria-live` regions for transient success and error feedback.
 
 ## P2: Visual system and aesthetic polish
 
@@ -222,13 +223,13 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Use three clearly differentiated surface levels instead of many similar navy rectangles.
 - [ ] Reserve cyan for primary actions, selection, focus, and active state.
 - [ ] Use neutral styling for secondary actions such as Reset, Export, and Clear.
-- [ ] Replace emoji interface icons with Lucide icons, which is already installed.
-- [ ] Give icon-only buttons explicit accessible names and polished tooltips.
+- [x] Replace emoji interface icons with Lucide icons, which is already installed.
+- [x] Give icon-only buttons explicit accessible names and polished tooltips.
 - [ ] Improve typography hierarchy for page title, section title, labels, metadata, code, and helper text.
 - [ ] Avoid 10px text for meaningful information.
 - [ ] Normalize hover, pressed, selected, focus, loading, disabled, success, and error states.
 - [ ] Add subtle, purposeful transitions for state changes without making the interface feel animated for its own sake.
-- [ ] Use Framer Motion only for useful transitions such as drawers, toasts, and major state changes, or remove it if it remains unused.
+- [x] Use Framer Motion only for useful transitions such as drawers, toasts, and major state changes, or remove it if it remains unused.
 - [ ] Ensure light and dark themes feel designed independently instead of functioning as color inversions.
 - [ ] Check all muted text, badges, lane colors, and controls against WCAG AA contrast.
 
@@ -237,32 +238,32 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Replace the centered Commit Inspector modal with a right-side desktop drawer that preserves graph context.
 - [ ] Show changed files and additions/deletions in the inspector.
 - [ ] Keep parent navigation inside the drawer and provide a clear navigation history.
-- [ ] Add Copy SHA feedback that waits for clipboard success.
-- [ ] Give dialogs and drawers `role="dialog"`, `aria-modal`, and labelled titles.
-- [ ] Trap focus while a modal or drawer is open.
-- [ ] Restore focus to the element that opened the modal or drawer.
-- [ ] Remove duplicate global Escape listeners and centralize overlay behavior.
+- [x] Add Copy SHA feedback that waits for clipboard success.
+- [x] Give dialogs and drawers `role="dialog"`, `aria-modal`, and labelled titles.
+- [x] Trap focus while a modal or drawer is open.
+- [x] Restore focus to the element that opened the modal or drawer.
+- [x] Remove duplicate global Escape listeners and centralize overlay behavior.
 - [ ] Consider an inline activity or explanation panel so “What Just Happened?” is not separated from the command that caused it.
 
 ## P2: Accessibility and keyboard support
 
-- [ ] Add visible `:focus-visible` styles to every interactive control.
-- [ ] Give the Playground and Explainer switch proper pressed-state or tab semantics.
-- [ ] Give the theme button an explicit accessible name such as “Switch to light theme”.
-- [ ] Mark decorative SVG and emoji content as hidden from assistive technology.
-- [ ] Ensure all controls have names that do not depend on the `title` attribute.
+- [x] Add visible `:focus-visible` styles to every interactive control.
+- [x] Give the Playground and Explainer switch proper pressed-state or tab semantics.
+- [x] Give the theme button an explicit accessible name such as “Switch to light theme”.
+- [x] Mark decorative SVG and emoji content as hidden from assistive technology.
+- [x] Ensure all controls have names that do not depend on the `title` attribute.
 - [ ] Provide keyboard access to commit nodes, graph controls, tabs, scenario controls, inspector navigation, and menus.
 - [ ] Announce command execution, errors, branch changes, and scenario progress without flooding screen-reader output.
-- [ ] Respect reduced-motion preferences throughout the interface.
+- [x] Respect reduced-motion preferences throughout the interface.
 - [ ] Verify logical focus order across the header, graph, terminal, state panel, and overlays.
 
 ## P2: Performance and maintainability
 
-- [ ] Lazy-load Explainer mode.
-- [ ] Lazy-load PNG and SVG export code so `html-to-image` is not part of the initial bundle.
-- [ ] Split large vendor chunks for React Flow, xterm, and the Git engine where practical.
-- [ ] Address the current Vite warning for the roughly 1.07 MB minified JavaScript bundle.
-- [ ] Remove Framer Motion if it is not used after the visual polish work.
+- [x] Lazy-load Explainer mode.
+- [x] Lazy-load PNG and SVG export code so `html-to-image` is not part of the initial bundle.
+- [x] Split large vendor chunks for React Flow, xterm, and the Git engine where practical.
+- [x] Address the current Vite warning for the roughly 1.07 MB minified JavaScript bundle.
+- [x] Remove Framer Motion if it is not used after the visual polish work.
 - [ ] Move repeated inline styles into CSS modules and shared primitives.
 - [ ] Create reusable Button, IconButton, Tabs, Tooltip, Toast, Dialog, and Menu components.
 - [ ] Replace string operation names in `gitBridge.send` with a typed operation map.
@@ -289,8 +290,8 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Test every Explainer preset for its intended successful state change.
 - [ ] Test that Before and After exports target the correct graph.
 - [ ] Test light and dark export backgrounds.
-- [ ] Test clipboard success and failure states.
-- [ ] Test shared-history loading, replay progress, cancellation, and malformed payloads.
+- [x] Test clipboard success and failure states.
+- [x] Test shared-history loading, replay progress, cancellation, and malformed payloads.
 - [x] Test that cherry-pick applies the expected file changes.
 - [x] Test that rebase preserves and reapplies feature file changes.
 - [x] Test that revert preserves unrelated later changes.
@@ -313,4 +314,4 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Verify both themes across every major screen and overlay.
 - [ ] Verify keyboard-only operation of every major feature.
 - [ ] Verify all commands shown in help and README behave as documented.
-- [ ] Update README feature claims and `bugs_fixes.md` to match verified behavior.
+- [x] Update README feature claims and `bugs_fixes.md` to match verified behavior.

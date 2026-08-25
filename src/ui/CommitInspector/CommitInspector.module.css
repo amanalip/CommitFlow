@@ -85,6 +85,13 @@
   word-break: break-all;
 }
 
+.inlineRef {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 8px;
+}
+
 .commitMessage {
   padding: 12px;
   background: var(--bg-color, #0f172a);

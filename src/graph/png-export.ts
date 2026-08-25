@@ -7,6 +7,16 @@ function includeInExport(node: HTMLElement): boolean {
   return true;
 }
 
+function exportFilename(elementId: string, extension: 'png' | 'svg'): string {
+  const context = elementId
+    .replace(/^commitflow-/, '')
+    .replace(/-container$/, '')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase() || 'history';
+  return `commitflow-${context}.${extension}`;
+}
+
 export async function exportGraphToPng(
   elementId = 'commitflow-graph-container',
   backgroundColor = '#0f172a'
@@ -24,7 +34,7 @@ export async function exportGraphToPng(
   });
 
   const link = document.createElement('a');
-  link.download = `commitflow-graph-${Date.now()}.png`;
+  link.download = exportFilename(elementId, 'png');
   link.href = dataUrl;
   link.click();
 }
@@ -44,7 +54,7 @@ export async function exportGraphToSvg(
   });
 
   const link = document.createElement('a');
-  link.download = `commitflow-graph-${Date.now()}.svg`;
+  link.download = exportFilename(elementId, 'svg');
   link.href = dataUrl;
   link.click();
 }

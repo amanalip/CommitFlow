@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
+import { X } from 'lucide-react';
 import styles from './ExplanationModal.module.css';
+import { copyText } from '../../utils/clipboard';
+import { useOverlayFocus } from '../useOverlayFocus';
 
 interface ExplanationModalProps {
   command: string;
@@ -8,37 +11,34 @@ interface ExplanationModalProps {
 }
 
 export function ExplanationModal({ command, explanation, onClose }: ExplanationModalProps) {
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useOverlayFocus(dialogRef, onClose);
 
   if (!command) return null;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(`$ ${command}\n\n${explanation}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await copyText(`$ ${command}\n\n${explanation}`);
+      setCopyStatus('copied');
+    } catch {
+      setCopyStatus('error');
+    }
+    setTimeout(() => setCopyStatus('idle'), 2000);
   };
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className={styles.modalContent} role="dialog" aria-modal="true" aria-labelledby="explanation-title" onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <div className={styles.title}>What Just Happened?</div>
+          <div id="explanation-title" className={styles.title}>What Just Happened?</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               type="button"
               onClick={handleCopy}
+              aria-live="polite"
               style={{
-                background: copied ? '#16a34a' : '#334155',
+                background: copyStatus === 'copied' ? '#16a34a' : copyStatus === 'error' ? '#dc2626' : '#334155',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '4px',
@@ -47,10 +47,10 @@ export function ExplanationModal({ command, explanation, onClose }: ExplanationM
                 cursor: 'pointer',
               }}
             >
-              {copied ? '✓ Copied' : 'Copy'}
+              {copyStatus === 'copied' ? 'Copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy'}
             </button>
-            <button className={styles.closeBtn} onClick={onClose} title="Close modal (Esc)">
-              ✕
+            <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close explanation">
+              <X size={17} aria-hidden="true" />
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlertCircle, Check, GitBranch, Lightbulb, Moon, RotateCcw, Share2, Sun } from 'lucide-react';
 import { Scenario } from '../../model/types';
 import { ThemeMode } from '../../theme/theme';
 import { ScenarioBrowser } from '../ScenarioBrowser/ScenarioBrowser';
@@ -9,13 +10,15 @@ interface HeaderProps {
   onModeChange: (mode: 'playground' | 'explainer') => void;
   selectedScenario: Scenario | null;
   onSelectScenario: (scenario: Scenario | null) => void;
-  onShare: () => void;
+  onShare: () => Promise<void>;
   onExplainLast: () => void;
   onReset: () => void;
   themeMode: ThemeMode;
   onToggleTheme: () => void;
   hasLastCommand: boolean;
   modeChangeDisabled?: boolean;
+  canShare?: boolean;
+  replayLabel?: string;
 }
 
 export function Header({
@@ -30,13 +33,28 @@ export function Header({
   onToggleTheme,
   hasLastCommand,
   modeChangeDisabled = false,
+  canShare = false,
+  replayLabel = '',
 }: HeaderProps) {
-  const [copySuccess, setCopySuccess] = useState(false);
+  const [shareStatus, setShareStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  const handleShareClick = () => {
-    onShare();
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
+  const handleShareClick = async () => {
+    setShareStatus('idle');
+    try {
+      await onShare();
+      setShareStatus('success');
+    } catch {
+      setShareStatus('error');
+    }
+    setTimeout(() => setShareStatus('idle'), 2400);
+  };
+
+  const handleModeKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, current: 'playground' | 'explainer') => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const nextMode = current === 'playground' ? 'explainer' : 'playground';
+    onModeChange(nextMode);
+    requestAnimationFrame(() => document.getElementById(`mode-tab-${nextMode}`)?.focus());
   };
 
   return (
@@ -46,6 +64,7 @@ export function Header({
           className={styles.logoIcon}
           viewBox="0 0 64 64"
           fill="none"
+          aria-hidden="true"
         >
           <defs>
             <linearGradient id="hdrTrunk" x1="8" y1="44" x2="56" y2="44" gradientUnits="userSpaceOnUse">
@@ -72,17 +91,29 @@ export function Header({
       </div>
 
       <div className={styles.centerGroup}>
-        <div className={styles.modeToggle}>
+        <div className={styles.modeToggle} role="tablist" aria-label="Application mode">
           <button
+            id="mode-tab-playground"
+            type="button"
+            role="tab"
+            aria-selected={mode === 'playground'}
+            tabIndex={mode === 'playground' ? 0 : -1}
             className={`${styles.modeButton} ${mode === 'playground' ? styles.activeMode : ''}`}
             onClick={() => onModeChange('playground')}
+            onKeyDown={(event) => handleModeKeyDown(event, 'playground')}
             disabled={modeChangeDisabled}
           >
             Playground
           </button>
           <button
+            id="mode-tab-explainer"
+            type="button"
+            role="tab"
+            aria-selected={mode === 'explainer'}
+            tabIndex={mode === 'explainer' ? 0 : -1}
             className={`${styles.modeButton} ${mode === 'explainer' ? styles.activeMode : ''}`}
             onClick={() => onModeChange('explainer')}
+            onKeyDown={(event) => handleModeKeyDown(event, 'explainer')}
             disabled={modeChangeDisabled}
           >
             Explainer
@@ -99,13 +130,14 @@ export function Header({
       </div>
 
       <div className={styles.rightGroup}>
+        {replayLabel && <span className={styles.replayStatus} role="status">{replayLabel}</span>}
         {mode === 'playground' && hasLastCommand && (
           <button
             className={styles.headerBtn}
             onClick={onExplainLast}
-            title="Explain the last executed git command"
+            aria-label="Explain the last executed Git command"
           >
-            💡 What Just Happened?
+            <Lightbulb size={15} aria-hidden="true" /> What Just Happened?
           </button>
         )}
 
@@ -114,13 +146,15 @@ export function Header({
             <button
               className={styles.headerBtn}
               onClick={handleShareClick}
-              title="Copy shareable link with command history"
+              disabled={!canShare}
+              aria-label={canShare ? 'Copy shareable Playground link' : 'Share unavailable until a command succeeds'}
             >
-              {copySuccess ? '✓ Link Copied!' : '🔗 Share'}
+              {shareStatus === 'success' ? <Check size={15} aria-hidden="true" /> : shareStatus === 'error' ? <AlertCircle size={15} aria-hidden="true" /> : <Share2 size={15} aria-hidden="true" />}
+              {shareStatus === 'success' ? 'Link copied' : shareStatus === 'error' ? 'Copy failed' : 'Share'}
             </button>
 
-            <button className={styles.headerBtn} onClick={onReset} title="Reset playground to empty repository">
-              ↻ Reset
+            <button type="button" className={styles.headerBtn} onClick={onReset} aria-label="Reset Playground to an empty repository">
+              <RotateCcw size={15} aria-hidden="true" /> Reset
             </button>
           </>
         )}
@@ -128,9 +162,9 @@ export function Header({
         <button
           className={`${styles.headerBtn} ${styles.themeBtn}`}
           onClick={onToggleTheme}
-          title={`Switch to ${themeMode === 'dark' ? 'light' : 'dark'} mode`}
+          aria-label={`Switch to ${themeMode === 'dark' ? 'light' : 'dark'} theme`}
         >
-          {themeMode === 'dark' ? '☀️' : '🌙'}
+          {themeMode === 'dark' ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
         </button>
 
         <a
@@ -138,12 +172,11 @@ export function Header({
           target="_blank"
           rel="noreferrer"
           className={styles.githubLink}
-          title="View source repository on GitHub"
+          aria-label="View source repository on GitHub"
         >
-          <svg className={styles.githubIcon} viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-            <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-          </svg>
+          <GitBranch className={styles.githubIcon} size={18} aria-hidden="true" />
         </a>
+        <span className={styles.srStatus} aria-live="polite">{shareStatus === 'success' ? 'Share link copied to clipboard.' : shareStatus === 'error' ? 'Could not copy the share link. Check browser clipboard permission.' : ''}</span>
       </div>
     </header>
   );

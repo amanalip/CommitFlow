@@ -54,4 +54,17 @@ describe('stash state restoration', () => {
     expect(gitBridge.getState().stashes).toHaveLength(1);
     expect(gitBridge.getState().stashes[0].message).toContain('second stash');
   });
+
+  it('drops only the requested stash without changing files', async () => {
+    await executeCommandLine('echo "first" > notes.txt');
+    await executeCommandLine('git stash push -m "first stash"');
+    await executeCommandLine('echo "second" > notes.txt');
+    await executeCommandLine('git stash push -m "second stash"');
+
+    const drop = await executeCommandLine('git stash drop stash@{1}');
+    expect(drop.exitCode).toBe(0);
+    expect(gitBridge.getState().stashes).toHaveLength(1);
+    expect(gitBridge.getState().stashes[0].message).toContain('second stash');
+    expect(gitBridge.getState().untrackedFiles).toHaveLength(0);
+  });
 });

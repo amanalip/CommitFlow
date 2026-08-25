@@ -1255,10 +1255,13 @@ function expandToGuidedLab(steps: ScenarioStep[]): ScenarioStep[] {
   for (let index = 0; index < steps.length; index++) {
     const step = steps[index];
     expanded.push(step);
-    if (expanded.length >= 15) continue;
     const verification = verificationStepFor(step);
     const nextCommand = steps[index + 1]?.command;
-    if (verification && verification.command !== nextCommand) expanded.push(verification);
+    const originalStepsRemaining = steps.length - index - 1;
+    const hasRoomWithoutDroppingOriginals = expanded.length + originalStepsRemaining < 20;
+    if (verification && verification.command !== nextCommand && hasRoomWithoutDroppingOriginals) {
+      expanded.push(verification);
+    }
   }
 
   const wrapUpChecks: ScenarioStep[] = [
@@ -1281,7 +1284,7 @@ function expandToGuidedLab(steps: ScenarioStep[]): ScenarioStep[] {
     if (expanded.at(-1)?.command !== review.command) expanded.push(review);
   }
 
-  return expanded.slice(0, 20);
+  return expanded;
 }
 
 export const SCENARIOS: Scenario[] = BASE_SCENARIOS.map((scenario) => ({

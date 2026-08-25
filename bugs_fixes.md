@@ -1,199 +1,54 @@
-# CommitFlow: Bug Fixes, Test Enhancements & UX Improvements
+# CommitFlow Reliability Record
 
-This document tracks all verified bug fixes, test expansions, and UI/UX improvements made to the CommitFlow codebase.
+This file summarizes the current verified behavior. The detailed work queue and acceptance checklist live in `improvements.md`.
 
----
+## Command and repository correctness
 
-## 1. Verified Bug Fixes
+- Repository mutations run through one serialized queue across the terminal, lessons, quick actions, URL replay, Explainer, and Reset.
+- `git --help`, `git -h`, `git help`, `git help <command>`, and `git <command> --help` return simulated command guidance.
+- Branch deletion protects unmerged branches with `-d` and permits an explicit forced deletion with `-D`.
+- Stash push, pop, drop, and clear preserve and restore staged, unstaged, deleted, and untracked file states.
+- Cherry-pick, rebase, revert, detached HEAD recovery, and soft, mixed, and hard reset are verified against repository file state.
+- `git rm`, `git restore`, staged diff, short status, combined commit flags, option termination, and quoted paths have dedicated coverage.
+- Invalid quotes, trailing escapes, unsupported input, missing paths, and failed commands return useful errors without advancing lesson progress.
 
-1. **Missing Buffer Global Polyfill in Browser Runtime**:
-   - *Problem*: `isomorphic-git` internally requires Node.js `Buffer`. When bundled without a browser polyfill, calling commit operations threw `ReferenceError: Buffer is not defined`.
-   - *Fix*: Added `buffer` package and polyfilled `Buffer` across `src/main.tsx` and `src/engine/git-worker.ts`.
+## Learning experience
 
-2. **Dual-Thread IndexedDB Lock Collision**:
-   - *Problem*: When Web Worker and main thread concurrently initialized LightningFS on the same database name, `navigator.locks` triggered `AbortError: Lock broken by another request with the steal option`.
-   - *Fix*: Unified the in-memory engine execution bridge, eliminating concurrency contention.
+- The Playground includes 42 guided lessons across ten Git topic groups.
+- Every lesson has 15 to 20 blocks with objectives, prerequisites, concepts, exact commands, affected Git areas, expected effects, output, and completion guidance.
+- Authored lesson commands are preserved when review blocks are added. This prevents final operations such as rebase from being cut off.
+- The command laboratory contains 27 searchable, categorized examples with purpose-built fixtures.
+- Explainer results compare HEAD, branches, commits, refs, tags, stashes, staged files, unstaged files, untracked files, and command output.
+- Before and After graphs can be focused, synchronized, inspected, and exported independently.
 
-3. **xterm.js Dimensions Crash in React Mount**:
-   - *Problem*: Synchronous `fit()` invocations before container layout caused viewport dimension errors.
-   - *Fix*: Wrapped resize and initial fit in `safeFit()` checking `clientWidth > 0 && clientHeight > 0` with proper cleanup.
+## Desktop UI and accessibility
 
-4. **Terminal Key Event Listener Leak & Disposal During Execution**:
-   - *Problem*: Re-attaching `term.onKey` on every React state change dropped keystrokes typed during async operations.
-   - *Fix*: Stabilized terminal listeners using persistent refs (`repoStateRef`, `onExecuteCommandRef`).
+- Dark and light themes use readable terminal, catalog, metadata, graph, and comparison colors.
+- Difficulty filters are separated from search and keep their labels inside the pill outline.
+- Graph nodes show commit type, ID, author, time, parent count, refs, selection guidance, and expandable long messages.
+- The graph refits after a real container resize when Follow HEAD is active.
+- Graph, terminal, and repository panes are resizable and keyboard adjustable. Sizes persist locally and can be reset or maximized.
+- Destructive actions use a labelled confirmation dialog with the exact command and consequence.
+- Dialogs trap focus, close with Escape, and restore focus to their opener.
+- Header mode controls and repository state tabs implement tab semantics and arrow-key navigation.
+- Clipboard and sharing feedback waits for the actual browser result and exposes failures through live status text.
+- Reduced-motion preferences disable nonessential motion.
 
-5. **Shell Redirection Quote Parser**:
-   - *Problem*: Regular expressions for `>` and `>>` split inside quoted strings (e.g. `echo "hello > world" > file.txt`).
-   - *Fix*: Replaced regex with quote-aware character scanner in `src/parser/command-parser.ts`.
+## Sharing and performance
 
-6. **Boolean Flag Consumption in Command Parser**:
-   - *Problem*: Long flags like `--allow-empty`, `--soft`, and `--hard` swallowed subsequent arguments like `-m "message"`.
-   - *Fix*: Added `KNOWN_BOOLEAN_FLAGS` set to ensure boolean flags do not consume following positional arguments.
+- Share payloads include a version and remain compatible with legacy command arrays.
+- Shared command replay is serialized and displays progress.
+- Explainer and graph export code load only when used.
+- React, React Flow, xterm, and the Git engine build into separate cacheable chunks.
+- The unused Framer Motion dependency was removed.
+- The production build completes without the previous large-chunk warning.
 
-7. **Previous Branch Navigation Support (`git checkout -`)**:
-   - *Problem*: Standard Git shortcut `git checkout -` and `git switch -` for returning to the previous branch failed with "pathspec not found".
-   - *Fix*: Added `previousBranch` state tracking and hyphen alias resolution in `executeCheckout`.
+## Verification commands
 
-8. **Detached HEAD to Named Branch Transition**:
-   - *Problem*: Running `git checkout <branch>` from detached HEAD state did not update `.git/HEAD` symbolic reference.
-   - *Fix*: Explicitly updated `.git/HEAD` with `ref: refs/heads/<branch>` on checkout in `src/engine/git-worker.ts`.
+```bash
+npm run test
+npm run test:e2e
+npm run build
+```
 
-9. **Chronological & Topological Commit Ordering**:
-   - *Problem*: `snapshotRepoState` extracted Map values without topological sorting, causing out-of-order nodes in React Flow.
-   - *Fix*: Implemented Kahn's topological sort with timestamp tie-breakers for commit arrays.
-
-10. **Corrupted URL Hash Exception Handling**:
-    - *Problem*: Visiting malformed share URLs crashed `JSON.parse` during decompression.
-    - *Fix*: Wrapped URL hash decoder in a try-catch block returning an empty array on invalid inputs.
-
-11. **Branch Deletion Parser Handling**:
-    - *Problem*: `git branch --delete <branch>` failed to extract branch names when parsed as a flag parameter.
-    - *Fix*: Normalized `-d`, `-D`, and `--delete` flag extraction across parser and command map.
-
-12. **Branch Rename Support (`git branch -m`)**:
-    - *Problem*: Renaming branches via `git branch -m [old] <new>` was unrecognized and failed.
-    - *Fix*: Added full branch rename engine handler updating `.git/refs/heads` and `.git/HEAD`.
-
-13. **Git Restore File and Staging Support**:
-    - *Problem*: Modern `git restore` and `git restore --staged` commands threw unrecognized command errors.
-    - *Fix*: Added `executeRestore` restoring modified files to HEAD and resetting index entries.
-
-14. **Staged Diff Support (`git diff --staged` / `--cached`)**:
-    - *Problem*: `git diff` only compared working tree files and ignored staged changes when requested with `--staged` or `--cached`.
-    - *Fix*: Added staged matrix diff inspection in `executeDiff(staged = true)`.
-
-15. **Short Status Output (`git status -s`)**:
-    - *Problem*: `git status -s` printed full status text instead of standard short two-column format.
-    - *Fix*: Added short status formatter output in `src/parser/output-formatter.ts`.
-
-16. **Git Log Limit and Reverse Chronological Order**:
-    - *Problem*: `git log` printed oldest commits first and ignored `-n <limit>` flags.
-    - *Fix*: Added reverse chronological commit ordering and limit slicing in `formatLogOutput`.
-
-17. **Filesystem Append Redirection (`>>`) Support**:
-    - *Problem*: File appends did not preserve existing content properly in virtual filesystem writes.
-    - *Fix*: Read existing file content and appended before writing in `executeWriteFile`.
-
-18. **Missing Implementation for Git Diff & Git Show**:
-    - *Problem*: `git diff` and `git show` were registered as valid commands in parser but threw "Unsupported command" errors.
-    - *Fix*: Implemented `executeDiff` and `executeShow` with color-coded additions, deletions, and metadata formatting.
-
-19. **Missing Implementation for Git Stash & Amend**:
-    - *Problem*: `git stash` and `git commit --amend` were not wired to engine handlers.
-    - *Fix*: Implemented `executeStash` (push, pop, list, clear) and commit amending with parent preservation.
-
-20. **Relative Merge Commit Ref Resolution (`HEAD^2`)**:
-    - *Problem*: Caret refs only matched trailing `^` characters without index numbers, failing on second parent `HEAD^2`.
-    - *Fix*: Added regex resolution for `HEAD^N` targeting specific merge parents.
-
-21. **Terminal Line Editing & Cursor Control**:
-    - *Problem*: ArrowLeft, ArrowRight, Home, End, Ctrl+A, Ctrl+E, Ctrl+U, and Ctrl+C were ignored or produced unescaped characters.
-    - *Fix*: Added full inline buffer navigation and keyboard shortcut dispatchers in `Terminal.tsx`.
-
----
-
-## 2. UX and UI Improvements
-
-1. **Brand SVG Vector Logo**: Implemented clean branch DAG SVG mark with high contrast for dark and light themes.
-2. **Interactive Node Click Inspector**: Clicking any commit node opens a modal with full SHA, author, timestamp, tree OID, parents, and message.
-3. **Parent Commit Click Navigation**: Clicking any parent SHA pill in CommitInspector directly jumps to and inspects that parent commit.
-4. **Copy to Clipboard Feedback**: Added visual "Copied" feedback badges when copying commit SHAs, share links, and branch names.
-5. **Graph Zoom and Minimap Controls**: Added zoom in, zoom out, fit view, and toggleable React Flow minimap.
-6. **Dual Format Graph Export**: Added buttons to export the commit graph as both high-resolution PNG and vector SVG.
-7. **1-Click Stage Actions**: Added "+ Stage" buttons in the Working Directory panel to stage files with one click.
-8. **1-Click Stage All Action**: Added "+ Stage All (N)" button when multiple untracked/modified files are present.
-9. **1-Click Unstage Actions**: Added "− Unstage" buttons in the Staging Area panel to unstage files instantly.
-10. **1-Click Unstage All Action**: Added "− Unstage All (N)" button to unstage all staged files with one click.
-11. **Dedicated Stash Management Tab**: Added a Stashes tab in StatePanel allowing one-click stash inspection and "Pop" application.
-12. **1-Click Branch Switch**: Added "Switch" button in the Branches list to switch active branch directly.
-13. **Active Branch Identification**: Distinct badge and styling for active branch with disabled switch actions.
-14. **HEAD Pulse Ring**: Added animated pulsing glow to the active HEAD commit node.
-15. **Color-Coded Branch Badges**: Branch badges match topological lane colors with contrasting backgrounds.
-16. **Terminal Keyboard Navigation**: Added `ArrowLeft`, `ArrowRight`, `Ctrl+A`/`Home`, and `Ctrl+E`/`End` inline cursor navigation.
-17. **Terminal Shortcuts**: Added `Ctrl+L` to clear screen, `Ctrl+C` to cancel prompt, and `Ctrl+U` to erase line.
-18. **Global Modal Shortcuts**: Added global `Escape` key listener to dismiss all active inspector and explanation modals.
-19. **Explanation Modal Copy**: Added one-click copy button for command explanation text.
-20. **Quick Preset Examples in Explainer Mode**: Added quick-try buttons for popular commands (`git commit`, `git checkout -b`, `git merge`, `git rebase`, `git reset`, `git revert`, `git tag`).
-21. **Scenario Progress Indicator**: Added step counter and description tracker in the playback controls bar.
-22. **Accessible Color Contrast**: Tuned theme tokens for WCAG AA contrast across terminal text, graph nodes, and badges.
-23. **Clean Working Tree Guidance**: Informative empty states for clean working directories, empty staging areas, and fresh repos.
-24. **GitHub Logo & Navigation Link**: Header includes direct link to source repository.
-25. **Author Copyright Footer**: Added footer with author attribution and license notice.
-
----
-
-## 3. Test Suite Enhancements (70 Automated Tests Across 16 Suites)
-
-- **Tokenizer and Parser Tests (19 Tests - `tests/parser.test.ts`)**:
-  - Quoted strings with special characters and semicolons.
-  - Boolean flags with follow-up `-m` arguments.
-  - Shell redirect commands (`>` and `>>`).
-  - Filesystem utilities (`touch`, `cat`, `ls`, `clear`).
-  - Branch deletion flags (`-d`, `-D`, `--delete`).
-  - Git switch `-c` and git checkout `-b`.
-  - Git restore and restore `--staged`.
-  - Stash push and pop parsing.
-  - Diff and show argument parsing.
-  - Log oneline and graph flags.
-  - Commit amend parsing.
-  - Multi-token auto-complete candidate generation.
-- **Engine Tests (11 Tests - `tests/engine.test.ts`)**:
-  - Complete git workflow (`init`, `touch`, `add`, `commit`, `branch`, `checkout`, `merge`).
-  - Branch deletion flow.
-  - Detached HEAD transitions and branch reattachment.
-  - Soft, mixed, and hard reset operations.
-  - Revert and cherry-pick executions.
-  - Git diff and git show inspect commands.
-  - Git stash push and pop flow.
-  - Git commit amend.
-  - Filesystem read, write, and append operations.
-  - Multi-file staging and creation.
-  - Tag deletion with `-d`.
-- **Checkout Dash Tests (2 Tests - `tests/checkout_dash.test.ts`)**:
-  - Switching back to previous branch with `git checkout -`.
-  - Switching back to previous branch with `git switch -`.
-- **Commit Inspector Model Tests (1 Test - `tests/commit_inspector_model.test.ts`)**:
-  - Commit metadata structure, author/committer object integrity, and branch mapping.
-- **Staged Diff Tests (2 Tests - `tests/diff_staged.test.ts`)**:
-  - Showing new staged file diffs with `git diff --staged`.
-  - Showing modified staged file diffs with `git diff --cached`.
-- **Short Status and Log Limits (2 Tests - `tests/status_short.test.ts`)**:
-  - Short two-column status output with `git status -s`.
-  - Limiting commit log entries with `git log -n <limit>`.
-- **Branch Rename Tests (2 Tests - `tests/branch_rename.test.ts`)**:
-  - Renaming current active branch with `git branch -m <new>`.
-  - Renaming specific named branch with `git branch -m <old> <new>`.
-- **Restore Command Tests (2 Tests - `tests/restore.test.ts`)**:
-  - Restoring unstaged working tree changes back to HEAD state.
-  - Unstaging staged changes via `git restore --staged <file>`.
-- **Output Formatter Tests (6 Tests - `tests/output_formatter.test.ts`)**:
-  - Uninitialized repository status formatting.
-  - Clean working tree status formatting.
-  - Multi-file status formatting with staged, unstaged, and untracked files.
-  - Detached HEAD status message.
-  - Commit log formatting in oneline and multi-line modes.
-  - Help text completeness across git and utility commands.
-- **Virtual Filesystem Tests (3 Tests - `tests/fs.test.ts`)**:
-  - Directory recursion and file writing/reading.
-  - Recursive directory listing excluding `.git`.
-  - Clean filesystem resets.
-- **Scenarios Data Schema Tests (2 Tests - `tests/scenarios_unit.test.ts`)**:
-  - Bundle size validation (>= 7 scenarios).
-  - Schema validity across steps, descriptions, and commands.
-- **Share Codec Tests (4 Tests - `tests/share.test.ts`)**:
-  - Compression and decompression integrity.
-  - Empty input handling.
-  - Corrupted and malformed hash resilience.
-  - Unicode character and emoji handling in commit messages.
-- **Layout & Lane Assignment Tests (4 Tests - `tests/layout.test.ts`)**:
-  - Lane assignment without collisions.
-  - React Flow nodes and edges generation.
-  - Merge commits with two parents in DAG layout.
-  - Empty commit history handling.
-- **Theme & Palette Tests (2 Tests - `tests/theme.test.ts`)**:
-  - Token integrity for dark and light themes.
-  - Palette contrast and modulo wrapping for topological lanes.
-- **Scenario Execution Tests (7 Tests - `tests/scenarios.test.ts`)**:
-  - Automated execution of all 7 bundled learning scenarios.
-- **Browser End-to-End Tests (1 Test - `tests/e2e.test.ts`)**:
-  - Playwright browser session typing interactive commands, verifying live DOM nodes, mode switching, footer, and repository links.
+The exact current test count is reported by Vitest during each run. It is intentionally not hard-coded here because the suite grows with the curriculum and command surface.

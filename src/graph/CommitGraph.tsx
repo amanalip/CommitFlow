@@ -19,7 +19,6 @@ import { CommitInfo } from '../model/types';
 import { buildGraphLayout } from '../layout/graph-layout';
 import { CommitNode } from './CommitNode';
 import { BranchEdge } from './BranchEdge';
-import { exportGraphToPng, exportGraphToSvg } from './png-export';
 import styles from './CommitGraph.module.css';
 
 const nodeTypes = {
@@ -61,6 +60,7 @@ function InnerCommitGraph({
   const [interactive, setInteractive] = useState(true);
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'success' | 'error'>('idle');
   const hasFitInitialView = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const layout = useMemo(() => {
     return buildGraphLayout(commits, onSelectCommit);
@@ -82,6 +82,32 @@ function InnerCommitGraph({
     return () => clearTimeout(timeout);
   }, [layout, fitView, followHead, setNodes, setEdges]);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    let previousWidth = container.clientWidth;
+    let previousHeight = container.clientHeight;
+    let frame = 0;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (Math.abs(width - previousWidth) < 2 && Math.abs(height - previousHeight) < 2) return;
+      previousWidth = width;
+      previousHeight = height;
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        if (commits.length > 0 && followHead) {
+          const headNode = nodes.find((node) => node.data.isHead);
+          fitView({ nodes: headNode ? [headNode] : undefined, padding: 0.8, duration: 250, maxZoom: 1 });
+        }
+      });
+    });
+    observer.observe(container);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [commits.length, fitView, followHead, nodes]);
+
   const handleFollowHead = () => {
     setFollowHead(true);
     const headNode = nodes.find((node) => node.data.isHead);
@@ -96,6 +122,7 @@ function InnerCommitGraph({
     setExportStatus('exporting');
     setShowExportMenu(false);
     try {
+      const { exportGraphToPng, exportGraphToSvg } = await import('./png-export');
       if (format === 'png') {
         await exportGraphToPng(graphId, isDark ? '#0f172a' : '#f8fafc');
       } else {
@@ -109,7 +136,7 @@ function InnerCommitGraph({
   };
 
   return (
-    <div id={graphId} className={styles.graphContainer}>
+    <div ref={containerRef} id={graphId} className={styles.graphContainer}>
       {commits.length === 0 && (
         <div className={styles.emptyOverlay} data-export-exclude="true">
           <div className={styles.emptyIcon}>⎇</div>

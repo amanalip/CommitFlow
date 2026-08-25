@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://amanalip.github.io/CommitFlow/">Live Demo</a> •
   <a href="#features">Features</a> •
-  <a href="#bundled-scenarios">Scenarios</a> •
+  <a href="#guided-curriculum">Curriculum</a> •
   <a href="#local-development">Local Setup</a>
 </p>
 
@@ -36,13 +36,16 @@ No backend, no accounts, and no installs required. The application runs entirely
 - Pure JavaScript Git engine via isomorphic-git inside a Web Worker.
 - In-memory virtual filesystem via lightning-fs.
 - Real commit SHAs, branch references, and merge calculations.
-- Supported commands: init, add, rm, commit, branch, checkout, switch, merge, rebase, cherry-pick, tag, reset (--soft, --mixed, --hard), revert, status, log, diff, and filesystem commands (touch, echo, cat, ls).
+- Supported commands: init, status, log, show, diff, add, restore, rm, commit, branch, checkout, switch, merge, rebase, cherry-pick, reset, revert, stash, tag, and help.
+- Supported learning utilities: touch, echo with overwrite or append, cat, ls, clear, and reset.
+- Git-style help is available through `git --help`, `git help <command>`, and `git <command> --help`.
 
 ### Terminal UI
 - xterm.js terminal emulator.
 - Command history navigation (up and down arrow keys).
 - Tab completion for git subcommands, branch names, and files.
 - Colored output for branches, commit hashes, and error messages.
+- Safe quoted paste handling, parser errors for incomplete input, busy feedback, and a serialized command queue.
 
 ### Commit Graph Visualization
 - Interactive commit DAG canvas built on React Flow.
@@ -50,36 +53,43 @@ No backend, no accounts, and no installs required. The application runs entirely
 - Dedicated HEAD pointer indicator.
 - Multi-parent merge commit edges with lane coloring.
 - Automatic layout and branch lane assignment.
+- Follow HEAD, fit, pan, zoom, lock, navigable minimap, PNG export, SVG export, and container resize refitting.
+- Expandable long commit messages and keyboard-operable commit inspection.
 
 ### State Panels
-- **Working Directory**: File list with status indicators (untracked, modified, deleted, added).
-- **Staging Area**: Staged vs unstaged changes side by side.
-- **Branches & Tags**: Local branch list with active branch marker and release tags.
-- **Commit Inspector**: Click any commit node to inspect full SHA, author, timestamp, tree OID, parents, and message.
+- **Working Directory**: File status plus stage and confirmed discard actions.
+- **Staging Area**: Staged and unstaged changes, including files that appear in both states.
+- **Branches, tags, and stashes**: Quick actions show the exact Git command and confirm destructive changes.
+- **Commit Inspector**: Inspect the full SHA, author, timestamp, tree OID, parents, refs, and full message.
 
 ### Step-by-Step Scenario Playback
-- Bundled learning scenarios for step-by-step learning.
-- Playback controls: Step Back, Step Forward, Play All, speed controls (0.5x, 1x, 2x), and Reset.
+- 42 guided lessons spanning first commits, inspection, staging, branches, merging, history editing, recovery, stashes, and releases.
+- Every lesson contains 15 to 20 teaching blocks with objectives, prerequisites, concepts, exact commands, expected effects, Git areas, output, and completion summaries.
+- Search by topic and difficulty, inspect the lesson map, move one block at a time, or play at a learner-friendly pace.
+
+### Command Laboratory
+- 27 guided command examples with purpose-built repository fixtures.
+- Searchable categories and difficulty filters.
+- Command anatomy, prerequisites, expected output, cautions, repository effects, and highlighted Before and After state tables.
+- Synchronized or independently focused React Flow graphs for detailed comparison.
 
 ### Sharing & Export
-- Share links: Command history compressed with lz-string and stored in URL hash.
-- Share link replay: Opening a shared link replays the full command sequence.
-- Export PNG of the current commit graph.
+- Versioned share links store compressed command history in the URL hash and report clipboard failures.
+- Share replay is serialized, shows progress, and stops safely if a command fails.
+- Export PNG or SVG with stable descriptive filenames.
 - Light and dark theme toggle with localStorage persistence.
+- Desktop pane sizes persist locally. The graph, terminal, and repository panes are resizable, keyboard adjustable, and temporarily maximizable.
+- Destructive Reset, discard, branch, tag, and stash actions require confirmation.
 
 ---
 
-## Bundled Scenarios
+## Guided Curriculum
 
-| Scenario | Focus |
-|---|---|
-| **Your First Repo** | Initializing a repo, staging files, and recording commits |
-| **Branching & Merging** | Creating branches, switching branches, and fast-forward merges |
-| **Rebasing a Feature** | Replaying feature commits on top of main for linear history |
-| **Detached HEAD Recovery** | Understanding detached HEAD and saving commits with a branch |
-| **Cherry-Picking** | Applying individual commits across branches |
-| **Undoing Mistakes** | Comparing reset modes and reverting commits safely |
-| **Tagging Releases** | Creating and managing release tags |
+The 42 lessons are organized into repository basics, inspection, staging and files, commits, branches, merging, history editing, recovery, stashes, and tags. Beginner lessons establish the mental model first. Intermediate and advanced lessons then cover divergent merges, rebase, cherry-pick, detached HEAD recovery, reset modes, revert, stash file states, and release workflows.
+
+Lesson playback uses deterministic timestamps and preserves retained commit IDs when stepping backward. Git operations that intentionally create new commits, including amend, revert, cherry-pick, and rebase, explain why their commit IDs change.
+
+The graph reads up to the newest 100 commits for display and teaching performance. Repository operations still work beyond that display window.
 
 ---
 
@@ -109,13 +119,14 @@ src/
   ui/
     Header/               # Header, mode toggle, scenario picker, sharing, theme
     Terminal/             # xterm.js terminal integration
-    StatePanel/           # Working directory, staging, and branch panels
+    StatePanel/           # Files, staging, branches, tags, and stashes
     CommitInspector/      # Commit inspection modal
     PlaybackControls/     # Step-by-step playback bar
-    ExplainerMode/        # Explainer before/after view
+    ExplainerMode/        # Command laboratory and state comparison
+    ConfirmDialog/        # Destructive action confirmation
     ExplanationModal/     # "What just happened?" modal
   share/
-    url-codec.ts          # lz-string URL hash compression and decompression
+    url-codec.ts          # Versioned lz-string URL payloads
   scenarios/
     data/                 # Learning scenario definitions
   theme/
@@ -142,6 +153,9 @@ npm install
 
 # Run automated tests
 npm run test
+
+# Run the browser workflow tests
+npm run test:e2e
 
 # Start local development server
 npm run dev
