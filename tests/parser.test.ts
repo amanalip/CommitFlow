@@ -52,6 +52,42 @@ describe('Command Parser', () => {
     expect(parsed.flags['m']).toBe('empty message');
   });
 
+  it('parses git commit --amend flag', () => {
+    const parsed = parseCommand('git commit --amend -m "amended commit"');
+    expect(parsed.type).toBe('commit');
+    expect(parsed.flags['amend']).toBe(true);
+    expect(parsed.flags['m']).toBe('amended commit');
+  });
+
+  it('parses git stash subcommands and flags', () => {
+    const p1 = parseCommand('git stash');
+    expect(p1.type).toBe('stash');
+
+    const p2 = parseCommand('git stash pop');
+    expect(p2.type).toBe('stash');
+    expect(p2.args).toEqual(['pop']);
+
+    const p3 = parseCommand('git stash -m "save wip"');
+    expect(p3.type).toBe('stash');
+    expect(p3.flags['m']).toBe('save wip');
+  });
+
+  it('parses git show and git diff commands', () => {
+    const pDiff = parseCommand('git diff');
+    expect(pDiff.type).toBe('diff');
+
+    const pShow = parseCommand('git show HEAD~1');
+    expect(pShow.type).toBe('show');
+    expect(pShow.args).toEqual(['HEAD~1']);
+  });
+
+  it('parses git log flags --oneline and --graph', () => {
+    const pLog = parseCommand('git log --oneline --graph');
+    expect(pLog.type).toBe('log');
+    expect(pLog.flags['oneline']).toBe(true);
+    expect(pLog.flags['graph']).toBe(true);
+  });
+
   it('parses file redirection commands with quotes correctly', () => {
     const parsed = parseCommand('echo "hello > world" > app.js');
     expect(parsed.type).toBe('echo');
@@ -105,6 +141,7 @@ describe('Suggestions & Autocomplete', () => {
     expect(findClosestGitCommand('marge')).toBe('merge');
     expect(findClosestGitCommand('comit')).toBe('commit');
     expect(findClosestGitCommand('chechout')).toBe('checkout');
+    expect(findClosestGitCommand('stsh')).toBe('stash');
   });
 
   it('provides autocomplete candidates for branches and subcommands', () => {
@@ -113,5 +150,8 @@ describe('Suggestions & Autocomplete', () => {
 
     const branchCandidates = getAutocompleteCandidates('git checkout fea', ['main', 'feature/login'], []);
     expect(branchCandidates).toContain('git checkout feature/login');
+
+    const fileCandidates = getAutocompleteCandidates('git add in', ['main'], ['index.html', 'style.css']);
+    expect(fileCandidates).toContain('git add index.html');
   });
 });

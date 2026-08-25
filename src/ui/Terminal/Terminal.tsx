@@ -107,6 +107,66 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
       if (isExecuting.current) return;
 
       const keyName = domEvent.key;
+      const isCtrl = domEvent.ctrlKey || domEvent.metaKey;
+
+      // Handle Ctrl+C (Interrupt/Cancel)
+      if (isCtrl && keyName === 'c') {
+        term.write('^C\r\n');
+        writePrompt();
+        return;
+      }
+
+      // Handle Ctrl+L (Clear screen)
+      if (isCtrl && keyName === 'l') {
+        term.clear();
+        term.write(getPrompt() + currentLine.current);
+        return;
+      }
+
+      // Handle Ctrl+U (Erase line before cursor)
+      if (isCtrl && keyName === 'u') {
+        currentLine.current = currentLine.current.slice(cursorPosition.current);
+        cursorPosition.current = 0;
+        term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 50) + '\r' + getPrompt() + currentLine.current);
+        return;
+      }
+
+      // Handle Ctrl+A / Home (Move cursor to start)
+      if ((isCtrl && keyName === 'a') || keyName === 'Home') {
+        if (cursorPosition.current > 0) {
+          term.write('\b'.repeat(cursorPosition.current));
+          cursorPosition.current = 0;
+        }
+        return;
+      }
+
+      // Handle Ctrl+E / End (Move cursor to end)
+      if ((isCtrl && keyName === 'e') || keyName === 'End') {
+        const diff = currentLine.current.length - cursorPosition.current;
+        if (diff > 0) {
+          term.write(currentLine.current.slice(cursorPosition.current));
+          cursorPosition.current = currentLine.current.length;
+        }
+        return;
+      }
+
+      // Handle ArrowLeft
+      if (keyName === 'ArrowLeft') {
+        if (cursorPosition.current > 0) {
+          cursorPosition.current--;
+          term.write('\b');
+        }
+        return;
+      }
+
+      // Handle ArrowRight
+      if (keyName === 'ArrowRight') {
+        if (cursorPosition.current < currentLine.current.length) {
+          term.write(currentLine.current[cursorPosition.current]);
+          cursorPosition.current++;
+        }
+        return;
+      }
 
       if (keyName === 'Enter') {
         const line = currentLine.current.trim();
@@ -148,7 +208,7 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
         if (historyIndex.current > 0) {
           historyIndex.current--;
           const histCmd = commandHistory.current[historyIndex.current];
-          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length) + '\r' + getPrompt());
+          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 20) + '\r' + getPrompt());
           term.write(histCmd);
           currentLine.current = histCmd;
           cursorPosition.current = histCmd.length;
@@ -157,13 +217,13 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
         if (historyIndex.current < commandHistory.current.length - 1) {
           historyIndex.current++;
           const histCmd = commandHistory.current[historyIndex.current];
-          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length) + '\r' + getPrompt());
+          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 20) + '\r' + getPrompt());
           term.write(histCmd);
           currentLine.current = histCmd;
           cursorPosition.current = histCmd.length;
         } else if (historyIndex.current === commandHistory.current.length - 1) {
           historyIndex.current = commandHistory.current.length;
-          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length) + '\r' + getPrompt());
+          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 20) + '\r' + getPrompt());
           currentLine.current = '';
           cursorPosition.current = 0;
         }
@@ -179,7 +239,7 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
         const candidates = getAutocompleteCandidates(currentLine.current, branchNames, fileNames);
         if (candidates.length === 1) {
           const completed = candidates[0];
-          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length) + '\r' + getPrompt());
+          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 20) + '\r' + getPrompt());
           term.write(completed);
           currentLine.current = completed;
           cursorPosition.current = completed.length;

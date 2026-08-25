@@ -9,11 +9,24 @@ interface WorkingDirPanelProps {
 export function WorkingDirPanel({ repoState, onAction }: WorkingDirPanelProps) {
   const unstaged = repoState.unstagedFiles;
   const untracked = repoState.untrackedFiles;
-
-  const isEmpty = unstaged.length === 0 && untracked.length === 0;
+  const totalCount = unstaged.length + untracked.length;
+  const isEmpty = totalCount === 0;
 
   return (
     <div className={styles.fileList}>
+      {totalCount > 1 && onAction && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '6px' }}>
+          <button
+            type="button"
+            className={styles.quickActionBtn}
+            onClick={() => onAction('git add .')}
+            title="Stage all modified and untracked files"
+          >
+            + Stage All ({totalCount})
+          </button>
+        </div>
+      )}
+
       {isEmpty && <div className={styles.emptyState}>Working directory is clean.</div>}
 
       {unstaged.map((file) => (

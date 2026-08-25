@@ -55,4 +55,33 @@ describe('Lane Assignment & Graph Layout', () => {
     expect(layout.edges.length).toBe(2);
     expect(layout.nodes.find((n) => n.id === mockCommits[2].oid)?.data.isHead).toBe(true);
   });
+
+  it('correctly handles merge commit with two parents in DAG layout', () => {
+    const mergeCommit: CommitInfo = {
+      oid: 'c444444444444444444444444444444444444444',
+      shortOid: 'c444444',
+      message: 'Merge branch feature into main',
+      author: { name: 'Dev', email: 'dev@test.com', timestamp: 4000, timezoneOffset: 0 },
+      committer: { name: 'Dev', email: 'dev@test.com', timestamp: 4000, timezoneOffset: 0 },
+      parentOids: [
+        'c333333333333333333333333333333333333333',
+        'c222222222222222222222222222222222222222',
+      ],
+      treeOid: 't4',
+      branches: ['main'],
+      tags: ['v1.0.0'],
+      isHead: true,
+    };
+
+    const commits = [...mockCommits, mergeCommit];
+    const layout = buildGraphLayout(commits);
+    expect(layout.nodes.length).toBe(4);
+    expect(layout.edges.length).toBe(4); // 2 previous + 2 for the merge parents
+  });
+
+  it('handles empty commit history gracefully', () => {
+    const layout = buildGraphLayout([]);
+    expect(layout.nodes).toEqual([]);
+    expect(layout.edges).toEqual([]);
+  });
 });

@@ -12,6 +12,19 @@ export function StagingPanel({ repoState, onAction }: StagingPanelProps) {
 
   return (
     <div className={styles.fileList}>
+      {staged.length > 1 && onAction && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '6px' }}>
+          <button
+            type="button"
+            className={styles.quickActionBtn}
+            onClick={() => onAction('git reset')}
+            title="Unstage all staged files"
+          >
+            − Unstage All ({staged.length})
+          </button>
+        </div>
+      )}
+
       {isEmpty && (
         <div className={styles.emptyState}>
           Staging area is empty. Use <code>git add &lt;file&gt;</code> to stage files.
