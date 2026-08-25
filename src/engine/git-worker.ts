@@ -745,27 +745,46 @@ export async function executeShow(commitRef = 'HEAD'): Promise<string> {
   ].join('\n');
 }
 
-export async function executeDiff(): Promise<string> {
+export async function executeDiff(staged = false): Promise<string> {
   const fs = getFS();
   const pfs = fs.promises;
   const matrix = await git.statusMatrix({ fs, dir: REPO_DIR });
   const diffLines: string[] = [];
 
   for (const [filepath, headStatus, workdirStatus, stageStatus] of matrix) {
-    if (workdirStatus === 2 && headStatus === 0) {
-      diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
-      diffLines.push(`\x1b[32m+++ b/${filepath} (new file)\x1b[0m`);
-      const content = await readTextFile(pfs, `${REPO_DIR}/${filepath}`);
-      for (const line of content.split('\n')) {
-        if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
+    if (staged) {
+      if (headStatus === 0 && stageStatus === 2) {
+        diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
+        diffLines.push(`\x1b[32m+++ b/${filepath} (staged new file)\x1b[0m`);
+        const content = await readTextFile(pfs, `${REPO_DIR}/${filepath}`);
+        for (const line of content.split('\n')) {
+          if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
+        }
+      } else if (headStatus === 1 && stageStatus === 2) {
+        diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
+        diffLines.push(`\x1b[33m--- a/${filepath}\x1b[0m`);
+        diffLines.push(`\x1b[32m+++ b/${filepath} (staged modification)\x1b[0m`);
+        const content = await readTextFile(pfs, `${REPO_DIR}/${filepath}`);
+        for (const line of content.split('\n')) {
+          if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
+        }
       }
-    } else if (workdirStatus === 2 && headStatus === 1 && stageStatus === 1) {
-      diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
-      diffLines.push(`\x1b[33m--- a/${filepath}\x1b[0m`);
-      diffLines.push(`\x1b[32m+++ b/${filepath}\x1b[0m`);
-      const content = await readTextFile(pfs, `${REPO_DIR}/${filepath}`);
-      for (const line of content.split('\n')) {
-        if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
+    } else {
+      if (workdirStatus === 2 && headStatus === 0) {
+        diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
+        diffLines.push(`\x1b[32m+++ b/${filepath} (new file)\x1b[0m`);
+        const content = await readTextFile(pfs, `${REPO_DIR}/${filepath}`);
+        for (const line of content.split('\n')) {
+          if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
+        }
+      } else if (workdirStatus === 2 && headStatus === 1 && stageStatus === 1) {
+        diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
+        diffLines.push(`\x1b[33m--- a/${filepath}\x1b[0m`);
+        diffLines.push(`\x1b[32m+++ b/${filepath}\x1b[0m`);
+        const content = await readTextFile(pfs, `${REPO_DIR}/${filepath}`);
+        for (const line of content.split('\n')) {
+          if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
+        }
       }
     }
   }

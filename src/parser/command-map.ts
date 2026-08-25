@@ -189,9 +189,10 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
   }
 
   if (parsed.type === 'status') {
+    const isShort = Boolean(parsed.flags['s'] || parsed.flags['short']);
     return {
       rawCommand: rawInput,
-      stdout: formatStatusOutput(state),
+      stdout: formatStatusOutput(state, isShort),
       stderr: '',
       exitCode: 0,
       explanation: 'Inspected status of the working tree and staging area.',
@@ -202,9 +203,13 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
   if (parsed.type === 'log') {
     const oneline = Boolean(parsed.flags['oneline']);
     const graph = Boolean(parsed.flags['graph']);
+    let limit: number | undefined = undefined;
+    if (parsed.flags['n']) {
+      limit = parseInt(String(parsed.flags['n']), 10);
+    }
     return {
       rawCommand: rawInput,
-      stdout: formatLogOutput(state.commits, oneline, graph),
+      stdout: formatLogOutput(state.commits, oneline, graph, limit),
       stderr: '',
       exitCode: 0,
       explanation: 'Viewed commit history.',
@@ -213,13 +218,16 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
   }
 
   if (parsed.type === 'diff') {
-    const res = await gitBridge.send('DIFF');
+    const staged = Boolean(parsed.flags['staged'] || parsed.flags['cached']);
+    const res = await gitBridge.send('DIFF', { staged });
     return {
       rawCommand: rawInput,
       stdout: res.output || '',
       stderr: '',
       exitCode: 0,
-      explanation: 'Inspected differences in the working tree.',
+      explanation: staged
+        ? 'Inspected differences in the staging area.'
+        : 'Inspected differences in the working tree.',
       state: res.state,
     };
   }

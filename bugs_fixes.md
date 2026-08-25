@@ -54,23 +54,35 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
     - *Problem*: Modern `git restore` and `git restore --staged` commands threw unrecognized command errors.
     - *Fix*: Added `executeRestore` restoring modified files to HEAD and resetting index entries.
 
-13. **Filesystem Append Redirection (`>>`) Support**:
+13. **Staged Diff Support (`git diff --staged` / `--cached`)**:
+    - *Problem*: `git diff` only compared working tree files and ignored staged changes when requested with `--staged` or `--cached`.
+    - *Fix*: Added staged matrix diff inspection in `executeDiff(staged = true)`.
+
+14. **Short Status Output (`git status -s`)**:
+    - *Problem*: `git status -s` printed full status text instead of standard short two-column format.
+    - *Fix*: Added short status formatter output in `src/parser/output-formatter.ts`.
+
+15. **Git Log Limit and Reverse Chronological Order**:
+    - *Problem*: `git log` printed oldest commits first and ignored `-n <limit>` flags.
+    - *Fix*: Added reverse chronological commit ordering and limit slicing in `formatLogOutput`.
+
+16. **Filesystem Append Redirection (`>>`) Support**:
     - *Problem*: File appends did not preserve existing content properly in virtual filesystem writes.
     - *Fix*: Read existing file content and appended before writing in `executeWriteFile`.
 
-14. **Missing Implementation for Git Diff & Git Show**:
+17. **Missing Implementation for Git Diff & Git Show**:
     - *Problem*: `git diff` and `git show` were registered as valid commands in parser but threw "Unsupported command" errors.
     - *Fix*: Implemented `executeDiff` and `executeShow` with color-coded additions, deletions, and metadata formatting.
 
-15. **Missing Implementation for Git Stash & Amend**:
+18. **Missing Implementation for Git Stash & Amend**:
     - *Problem*: `git stash` and `git commit --amend` were not wired to engine handlers.
     - *Fix*: Implemented `executeStash` (push, pop, list, clear) and commit amending with parent preservation.
 
-16. **Relative Merge Commit Ref Resolution (`HEAD^2`)**:
+19. **Relative Merge Commit Ref Resolution (`HEAD^2`)**:
     - *Problem*: Caret refs only matched trailing `^` characters without index numbers, failing on second parent `HEAD^2`.
     - *Fix*: Added regex resolution for `HEAD^N` targeting specific merge parents.
 
-17. **Terminal Line Editing & Cursor Control**:
+20. **Terminal Line Editing & Cursor Control**:
     - *Problem*: ArrowLeft, ArrowRight, Home, End, Ctrl+A, Ctrl+E, Ctrl+U, and Ctrl+C were ignored or produced unescaped characters.
     - *Fix*: Added full inline buffer navigation and keyboard shortcut dispatchers in `Terminal.tsx`.
 
@@ -106,7 +118,7 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
 
 ---
 
-## 3. Test Suite Enhancements (63 Automated Tests Across 12 Suites)
+## 3. Test Suite Enhancements (67 Automated Tests Across 14 Suites)
 
 - **Tokenizer and Parser Tests (19 Tests - `tests/parser.test.ts`)**:
   - Quoted strings with special characters and semicolons.
@@ -133,6 +145,12 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
   - Filesystem read, write, and append operations.
   - Multi-file staging and creation.
   - Tag deletion with `-d`.
+- **Staged Diff Tests (2 Tests - `tests/diff_staged.test.ts`)**:
+  - Showing new staged file diffs with `git diff --staged`.
+  - Showing modified staged file diffs with `git diff --cached`.
+- **Short Status and Log Limits (2 Tests - `tests/status_short.test.ts`)**:
+  - Short two-column status output with `git status -s`.
+  - Limiting commit log entries with `git log -n <limit>`.
 - **Branch Rename Tests (2 Tests - `tests/branch_rename.test.ts`)**:
   - Renaming current active branch with `git branch -m <new>`.
   - Renaming specific named branch with `git branch -m <old> <new>`.

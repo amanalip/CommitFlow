@@ -271,6 +271,11 @@ export function parseCommand(rawInput: string): ParsedCommand {
       } else if (flagName === 'a' && i + 1 < rest.length && !rest[i + 1].startsWith('-') && subcommand === 'tag') {
         flags['a'] = rest[i + 1];
         i++;
+      } else if (flagName === 'n' && i + 1 < rest.length) {
+        flags['n'] = rest[i + 1];
+        i++;
+      } else if (/^\d+$/.test(flagName)) {
+        flags['n'] = flagName;
       } else if (flagName === 'd' && i + 1 < rest.length && !rest[i + 1].startsWith('-')) {
         flags['d'] = rest[i + 1];
         i++;

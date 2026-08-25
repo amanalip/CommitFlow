@@ -1,8 +1,22 @@
 import { RepoState, CommitInfo } from '../model/types';
 
-export function formatStatusOutput(state: RepoState): string {
+export function formatStatusOutput(state: RepoState, short = false): string {
   if (!state.initialized) {
     return '\x1b[31mfatal: not a git repository (or any of the parent directories): .git\x1b[0m';
+  }
+
+  if (short) {
+    const lines: string[] = [];
+    for (const f of state.stagedFiles) {
+      lines.push(`\x1b[32mM  ${f.path}\x1b[0m`);
+    }
+    for (const f of state.unstagedFiles) {
+      lines.push(`\x1b[31m M ${f.path}\x1b[0m`);
+    }
+    for (const f of state.untrackedFiles) {
+      lines.push(`\x1b[31m?? ${f}\x1b[0m`);
+    }
+    return lines.join('\n');
   }
 
   const lines: string[] = [];
@@ -56,13 +70,16 @@ export function formatStatusOutput(state: RepoState): string {
   return lines.join('\n');
 }
 
-export function formatLogOutput(commits: CommitInfo[], oneline = false, graph = false): string {
+export function formatLogOutput(commits: CommitInfo[], oneline = false, graph = false, limit?: number): string {
   if (commits.length === 0) {
     return '\x1b[31mfatal: your current branch does not have any commits yet\x1b[0m';
   }
 
+  const reversed = [...commits].reverse();
+  const targetCommits = typeof limit === 'number' && limit > 0 ? reversed.slice(0, limit) : reversed;
+
   if (oneline) {
-    return commits
+    return targetCommits
       .map((c) => {
         const prefix = graph ? '* ' : '';
         const refs: string[] = [];
@@ -76,7 +93,7 @@ export function formatLogOutput(commits: CommitInfo[], oneline = false, graph = 
       .join('\n');
   }
 
-  return commits
+  return targetCommits
     .map((c) => {
       const refs: string[] = [];
       if (c.isHead) refs.push('\x1b[36mHEAD\x1b[0m');
@@ -89,6 +106,7 @@ export function formatLogOutput(commits: CommitInfo[], oneline = false, graph = 
       const lines = [
         `\x1b[33mcommit ${c.oid}\x1b[0m${refString}`,
         `Author: ${c.author.name} <${c.author.email}>`,
+        `Date:   ${dateStr}`,
         `Date:   ${dateStr}`,
         '',
         `    ${c.message}`,
@@ -107,9 +125,10 @@ export function formatHelpText(): string {
     '  \x1b[36mgit init\x1b[0m                         Initialize an empty repository',
     '  \x1b[36mgit add <file... | .>\x1b[0m            Stage files for commit',
     '  \x1b[36mgit commit -m "<msg>"\x1b[0m           Record staged changes to repository',
-    '  \x1b[36mgit branch [-d | -D] [name]\x1b[0m     List, create, or delete branches',
-    '  \x1b[36mgit checkout [-b] <branch|sha>\x1b[0m  Switch branches or restore files',
+    '  \x1b[36mgit branch [-d|-D|-m] [name]\x1b[0m    List, create, delete, or rename branches',
+    '  \x1b[36mgit checkout [-b] <branch|sha>\x1b[0m  Switch branches or checkout commits',
     '  \x1b[36mgit switch [-c] <branch>\x1b[0m        Switch or create branches',
+    '  \x1b[36mgit restore [--staged] <file>\x1b[0m  Restore working tree files or unstage',
     '  \x1b[36mgit merge <branch>\x1b[0m               Join development histories together',
     '  \x1b[36mgit rebase <upstream>\x1b[0m            Reapply commits on top of another branch',
     '  \x1b[36mgit cherry-pick <sha>\x1b[0m            Apply changes from existing commit',
@@ -117,9 +136,9 @@ export function formatHelpText(): string {
     '  \x1b[36mgit reset [--soft|--hard] <sha>\x1b[0m Reset current HEAD to specified state',
     '  \x1b[36mgit revert <sha>\x1b[0m                 Revert an existing commit',
     '  \x1b[36mgit stash [pop|list|clear]\x1b[0m       Stash changes away in dirty working tree',
-    '  \x1b[36mgit status\x1b[0m                       Show working tree and staging status',
-    '  \x1b[36mgit log [--oneline] [--graph]\x1b[0m    Show commit history',
-    '  \x1b[36mgit diff\x1b[0m                         Show changes between commits/working tree',
+    '  \x1b[36mgit status [-s|--short]\x1b[0m          Show working tree and staging status',
+    '  \x1b[36mgit log [-n N] [--oneline]\x1b[0m      Show commit history',
+    '  \x1b[36mgit diff [--staged|--cached]\x1b[0m    Show differences in tree or staging area',
     '  \x1b[36mgit show <sha>\x1b[0m                   Inspect commit details and tree metadata',
     '',
     'Filesystem & Utility Commands:',

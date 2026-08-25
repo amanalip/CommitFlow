@@ -89,7 +89,7 @@ class GitBridge {
           output = await workerEngine.executeShow(payload.target);
           break;
         case 'DIFF':
-          output = await workerEngine.executeDiff();
+          output = await workerEngine.executeDiff(payload?.staged);
           break;
         case 'STASH':
           output = await workerEngine.executeStash(payload.subcommand, payload.message);
