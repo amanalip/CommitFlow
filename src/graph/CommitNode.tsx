@@ -13,6 +13,13 @@ export const CommitNode = memo(({ data, selected }: NodeProps) => {
     }
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
     <div
       className={`${styles.nodeCard} ${isHead ? styles.nodeHeadActive : ''} ${
@@ -20,6 +27,10 @@ export const CommitNode = memo(({ data, selected }: NodeProps) => {
       }`}
       style={{ '--node-color': color } as React.CSSProperties}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`Inspect commit ${commit.shortOid}: ${commit.message}`}
       title={`Click to inspect commit ${commit.shortOid}`}
     >
       <Handle

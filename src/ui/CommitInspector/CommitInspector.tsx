@@ -43,9 +43,15 @@ export function CommitInspector({ commit, allCommits = [], onSelectCommit, onClo
 
   return (
     <div className={styles.inspectorOverlay} onClick={onClose}>
-      <div className={styles.inspectorModal} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={styles.inspectorModal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="commit-inspector-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.modalHeader}>
-          <div className={styles.modalTitle}>
+          <div id="commit-inspector-title" className={styles.modalTitle}>
             <span>Commit Inspector</span>
             <span style={{ color: '#38bdf8', fontFamily: 'monospace' }}>
               {commit.shortOid}

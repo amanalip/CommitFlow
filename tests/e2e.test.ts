@@ -24,6 +24,14 @@ describe('Browser End-to-End Test', () => {
     // Verify title and header are present
     const headerTitle = await page.locator('header').innerText();
     expect(headerTitle).toContain('CommitFlow');
+    expect(await page.getByText('Your commit history will appear here').isVisible()).toBe(true);
+    expect(await page.getByRole('button', { name: 'Zoom in' }).count()).toBe(1);
+    expect(await page.getByRole('button', { name: 'Zoom out' }).count()).toBe(1);
+
+    await page.getByRole('button', { name: 'Export' }).click();
+    expect(await page.getByRole('menuitem', { name: 'PNG image' }).isVisible()).toBe(true);
+    expect(await page.getByRole('menuitem', { name: 'SVG vector' }).isVisible()).toBe(true);
+    await page.getByRole('button', { name: 'Export' }).click();
 
     // Focus terminal and type commands
     const terminal = page.locator('.xterm-helper-textarea');
@@ -54,6 +62,12 @@ describe('Browser End-to-End Test', () => {
     expect(await commitNode.isVisible()).toBe(true);
     const commitText = await commitNode.innerText();
     expect(commitText).toContain('initial commit');
+
+    const accessibleCommit = page.getByRole('button', { name: /Inspect commit.*initial commit/ });
+    await accessibleCommit.focus();
+    await page.keyboard.press('Enter');
+    expect(await page.getByRole('dialog').isVisible()).toBe(true);
+    await page.keyboard.press('Escape');
 
     // Theme changes must update xterm in place without erasing scrollback.
     const terminalRows = page.locator('.xterm-rows');

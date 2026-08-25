@@ -2,14 +2,15 @@ import { useMemo, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
-  Controls,
   MiniMap,
+  Panel,
   useNodesState,
   useEdgesState,
   useReactFlow,
   ReactFlowProvider,
   BackgroundVariant,
 } from '@xyflow/react';
+import { Download, FileCode, Image, Map, Maximize, Minus, Plus } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 
 import { CommitInfo } from '../model/types';
@@ -44,6 +45,8 @@ function InnerCommitGraph({
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [showMinimap, setShowMinimap] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'success' | 'error'>('idle');
 
   const layout = useMemo(() => {
     return buildGraphLayout(commits, onSelectCommit);
@@ -53,78 +56,36 @@ function InnerCommitGraph({
     setNodes(layout.nodes);
     setEdges(layout.edges);
     const timeout = setTimeout(() => {
-      fitView({ padding: 0.25, duration: 400 });
+      fitView({ padding: 0.25, duration: 400, maxZoom: 1 });
     }, 50);
     return () => clearTimeout(timeout);
   }, [layout, fitView, setNodes, setEdges]);
 
-  const handleExportPng = async () => {
+  const handleExport = async (format: 'png' | 'svg') => {
+    setExportStatus('exporting');
+    setShowExportMenu(false);
     try {
-      await exportGraphToPng(graphId, isDark ? '#0f172a' : '#f8fafc');
+      if (format === 'png') {
+        await exportGraphToPng(graphId, isDark ? '#0f172a' : '#f8fafc');
+      } else {
+        await exportGraphToSvg(graphId, isDark ? '#0f172a' : '#f8fafc');
+      }
+      setExportStatus('success');
     } catch {
-      // Ignore
+      setExportStatus('error');
     }
-  };
-
-  const handleExportSvg = async () => {
-    try {
-      await exportGraphToSvg(graphId, isDark ? '#0f172a' : '#f8fafc');
-    } catch {
-      // Ignore
-    }
+    window.setTimeout(() => setExportStatus('idle'), 2200);
   };
 
   return (
     <div id={graphId} className={styles.graphContainer}>
-      <div className={styles.graphControls}>
-        <button
-          className={styles.controlButton}
-          onClick={() => fitView({ padding: 0.25, duration: 400 })}
-          title="Fit graph to view"
-        >
-          Fit View
-        </button>
-        <button
-          className={styles.controlButton}
-          onClick={() => zoomIn({ duration: 300 })}
-          title="Zoom In"
-        >
-          +
-        </button>
-        <button
-          className={styles.controlButton}
-          onClick={() => zoomOut({ duration: 300 })}
-          title="Zoom Out"
-        >
-          −
-        </button>
-        <button
-          className={`${styles.controlButton} ${showMinimap ? styles.activeButton : ''}`}
-          onClick={() => setShowMinimap((prev) => !prev)}
-          title="Toggle Minimap"
-        >
-          🗺 Map
-        </button>
-        <button
-          className={styles.controlButton}
-          onClick={handleExportPng}
-          title="Export commit graph as PNG"
-        >
-          Export PNG
-        </button>
-        <button
-          className={styles.controlButton}
-          onClick={handleExportSvg}
-          title="Export commit graph as SVG"
-        >
-          Export SVG
-        </button>
-      </div>
-
       {commits.length === 0 && (
-        <div className={styles.emptyOverlay}>
+        <div className={styles.emptyOverlay} data-export-exclude="true">
           <div className={styles.emptyIcon}>⎇</div>
-          <div>No commits yet. Type <code>git commit</code> in the terminal to watch commits flow.</div>
+          <div className={styles.emptyTitle}>Your commit history will appear here</div>
+          <div className={styles.emptyDescription}>
+            Start with <code>git init</code>, create a file, stage it, and commit it.
+          </div>
         </div>
       )}
 
@@ -138,15 +99,87 @@ function InnerCommitGraph({
         fitView
         minZoom={0.2}
         maxZoom={2.0}
+        colorMode={isDark ? 'dark' : 'light'}
+        fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
         proOptions={{ hideAttribution: true }}
       >
+        <Panel position="top-right" className={styles.graphPanel}>
+          <div className={styles.graphControls} data-export-exclude="true">
+            <button
+              type="button"
+              className={styles.controlButton}
+              onClick={() => fitView({ padding: 0.25, duration: 400, maxZoom: 1 })}
+              aria-label="Fit graph to view"
+              title="Fit graph to view"
+            >
+              <Maximize size={15} aria-hidden="true" />
+              <span>Fit</span>
+            </button>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={() => zoomIn({ duration: 300 })}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              <Plus size={16} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={styles.iconButton}
+              onClick={() => zoomOut({ duration: 300 })}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              <Minus size={16} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={`${styles.controlButton} ${showMinimap ? styles.activeButton : ''}`}
+              onClick={() => setShowMinimap((prev) => !prev)}
+              aria-pressed={showMinimap}
+              title="Toggle minimap"
+            >
+              <Map size={15} aria-hidden="true" />
+              <span>Map</span>
+            </button>
+            <div className={styles.exportControl}>
+              <button
+                type="button"
+                className={styles.controlButton}
+                onClick={() => setShowExportMenu((current) => !current)}
+                aria-expanded={showExportMenu}
+                aria-haspopup="menu"
+                disabled={exportStatus === 'exporting'}
+              >
+                <Download size={15} aria-hidden="true" />
+                <span>{exportStatus === 'exporting' ? 'Exporting' : 'Export'}</span>
+              </button>
+              {showExportMenu && (
+                <div className={styles.exportMenu} role="menu">
+                  <button type="button" role="menuitem" onClick={() => handleExport('png')}>
+                    <Image size={15} aria-hidden="true" />
+                    PNG image
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => handleExport('svg')}>
+                    <FileCode size={15} aria-hidden="true" />
+                    SVG vector
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className={styles.exportFeedback} aria-live="polite">
+            {exportStatus === 'success' && 'Graph exported'}
+            {exportStatus === 'error' && 'Export failed'}
+          </div>
+        </Panel>
         <Background
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1.5}
           color={isDark ? '#334155' : '#cbd5e1'}
         />
-        <Controls showInteractive={false} />
         {showMinimap && (
           <MiniMap
             nodeColor={(n: any) => n.data?.color || '#38bdf8'}

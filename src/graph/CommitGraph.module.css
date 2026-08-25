@@ -7,13 +7,14 @@
 
 .emptyOverlay {
   position: absolute;
+  z-index: 2;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   color: var(--text-muted, #64748b);
   font-size: 14px;
   pointer-events: none;
@@ -21,27 +22,57 @@
 }
 
 .emptyIcon {
-  font-size: 36px;
-  opacity: 0.5;
+  font-size: 32px;
+  color: var(--accent-color, #38bdf8);
+  opacity: 0.7;
+}
+
+.emptyTitle {
+  color: var(--text-color, #f8fafc);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.emptyDescription {
+  color: var(--text-muted, #64748b);
+  line-height: 1.5;
+}
+
+.emptyDescription code {
+  padding: 2px 6px;
+  color: var(--accent-color, #38bdf8);
+  background: color-mix(in srgb, var(--accent-color, #38bdf8) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-color, #38bdf8) 25%, transparent);
+  border-radius: 5px;
+}
+
+.graphPanel {
+  margin: 14px;
 }
 
 .graphControls {
-  position: absolute;
-  top: 16px;
-  right: 16px;
   display: flex;
-  gap: 8px;
-  z-index: 10;
-}
-
-.controlButton {
-  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--bg-secondary, #1e293b);
+  padding: 5px;
+  background: color-mix(in srgb, var(--bg-secondary, #1e293b) 92%, transparent);
   border: 1px solid var(--border-color, #334155);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.2);
+  backdrop-filter: blur(12px);
+}
+
+.controlButton,
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid transparent;
   color: var(--text-color, #f8fafc);
   font-size: 12px;
   font-weight: 500;
@@ -49,7 +80,68 @@
   transition: all 0.15s ease;
 }
 
-.controlButton:hover {
-  background: var(--border-color, #334155);
-  border-color: var(--accent-color, #38bdf8);
+.iconButton {
+  width: 32px;
+  padding: 0;
+}
+
+.controlButton:hover:not(:disabled),
+.iconButton:hover:not(:disabled),
+.activeButton {
+  background: var(--bg-tertiary, #334155);
+  border-color: color-mix(in srgb, var(--accent-color, #38bdf8) 50%, transparent);
+}
+
+.controlButton:focus-visible,
+.iconButton:focus-visible,
+.exportMenu button:focus-visible {
+  outline: 2px solid var(--accent-color, #38bdf8);
+  outline-offset: 2px;
+}
+
+.controlButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.exportControl {
+  position: relative;
+}
+
+.exportMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 150px;
+  padding: 5px;
+  background: var(--bg-secondary, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 9px;
+  box-shadow: 0 14px 34px rgba(2, 6, 23, 0.3);
+}
+
+.exportMenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 9px;
+  color: var(--text-color, #f8fafc);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.exportMenu button:hover {
+  background: var(--bg-tertiary, #334155);
+}
+
+.exportFeedback {
+  min-height: 18px;
+  padding-top: 4px;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 11px;
+  text-align: right;
 }

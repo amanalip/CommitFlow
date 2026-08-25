@@ -70,24 +70,24 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## P1: Graph usability and appearance
 
-- [ ] Remove the duplicated graph zoom and fit controls.
-- [ ] Build one cohesive toolbar using React Flow `Panel`, `Controls`, `MiniMap`, and `colorMode` features.
-- [ ] Put PNG and SVG options inside one Export menu.
-- [ ] Theme React Flow's built-in controls so the white control stack never appears in dark mode.
+- [x] Remove the duplicated graph zoom and fit controls.
+- [x] Build one cohesive toolbar using React Flow `Panel`, `MiniMap`, and `colorMode` features.
+- [x] Put PNG and SVG options inside one Export menu.
+- [x] Remove React Flow's white built-in control stack from dark mode.
 - [x] Pass the active theme background into PNG and SVG export instead of hard-coding dark navy.
-- [ ] Exclude UI controls from exported graph images unless explicitly requested.
-- [ ] Show export progress, success, and failure feedback.
+- [x] Exclude UI controls from exported graph images unless explicitly requested.
+- [x] Show export progress, success, and failure feedback.
 - [ ] Use stable, descriptive export filenames.
-- [ ] Set a maximum fit zoom near `1` so short histories remain readable instead of shrinking excessively.
+- [x] Set a maximum fit zoom near `1` so short histories remain readable instead of shrinking excessively.
 - [ ] Refit when the graph container changes size.
 - [ ] Avoid resetting the viewport after every repository update when the user has manually panned or zoomed.
 - [ ] Add a Follow HEAD option for users who want automatic viewport movement.
-- [ ] Increase commit-node text to at least 12px for primary information.
+- [x] Increase commit-node text to at least 12px for primary information.
 - [ ] Improve long commit-message handling with a readable tooltip or expandable node rather than relying only on truncation.
 - [ ] Reduce excessive node glow and continuous HEAD pulsing.
-- [ ] Respect `prefers-reduced-motion` for HEAD animation and graph transitions.
-- [ ] Make commit nodes keyboard-focusable and operable with Enter and Space.
-- [ ] Add clear focus and selected states that are distinct from hover.
+- [x] Respect `prefers-reduced-motion` for HEAD animation and graph transitions.
+- [x] Make commit nodes keyboard-focusable and operable with Enter and Space.
+- [x] Add clear focus and selected states that are distinct from hover.
 - [ ] Use a commit lookup set in layout generation instead of repeated `commits.some` scans.
 - [ ] Document or remove the silent 100-commit history limit.
 
@@ -104,7 +104,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## P1: Empty state and onboarding
 
-- [ ] Replace “Type git commit” with accurate first-run guidance that starts with `git init`.
+- [x] Replace “Type git commit” with accurate first-run guidance that starts with `git init`.
 - [ ] Add a Start Your First Repository action.
 - [ ] Add a Load Guided Scenario action.
 - [ ] Add an Open Command Reference action.
