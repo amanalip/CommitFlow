@@ -2,6 +2,15 @@
 
 Desktop-focused implementation checklist for functional correctness, UX, visual polish, accessibility, performance, and test coverage.
 
+## Delivery batches
+
+- [ ] Batch 1, command correctness: serialize repository mutations, enforce safe branch deletion, and make stash state and stash references accurate.
+- [ ] Batch 2, playback and replay state: cancel playback during mode changes and Reset, prevent shared-history races, and keep Step Back explanations synchronized.
+- [ ] Batch 3, terminal and destructive-action safety: validate multiline and quoted paste, then add clear confirmation patterns for destructive operations.
+- [ ] Batch 4, accessibility and reliability: complete tab semantics, focus management, ARIA, keyboard navigation, contrast, clipboard errors, and share errors.
+- [ ] Batch 5, graph and workspace polish: refit after real container resizes, improve long-message inspection, and add persistent resizable panes.
+- [ ] Batch 6, documentation and performance: update product documentation, lazy-load suitable features, and split the remaining large JavaScript bundle.
+
 ## P0: Repository and command correctness
 
 - [x] Support `git --help`, `git -h`, and `git help` as top-level help commands.
@@ -80,6 +89,9 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Distinguish commands that inspect state from commands that mutate state.
 - [x] Keep the current explanation and command catalog selection intact while switching themes.
 - [x] Make Explainer errors teach the prerequisite or suggest a guided example instead of showing only the engine error.
+- [x] Raise dark-mode secondary and muted text contrast so explanations, metadata, comparison rows, and catalog descriptions remain readable.
+- [x] Increase the smallest Explainer teaching text instead of using low-contrast 7px and 8px content for meaningful information.
+- [x] Fix difficulty filter pills so every label is vertically centered and contained inside its outline.
 
 ## P1: Terminal visual treatment
 
@@ -147,9 +159,9 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 ## P1: Scenario learning experience
 
 - [x] Replace the basic scenario select with a searchable, themed scenario browser.
+- [x] Add difficulty and topic filters so the 42-lesson curriculum remains easy to browse.
 - [x] Show category, difficulty, summary, estimated time, step count, and progress for each scenario.
-- [x] Expand the curriculum to 28 focused lessons spanning repository basics, inspection, staging, branches, merges, rebase, recovery, tags, and selective integration.
-- [ ] Expand the main curriculum to 42 high-quality lessons with unique goals, fixtures, commands, and beginner explanations.
+- [x] Expand the curriculum to 42 high-quality lessons with unique goals, fixtures, commands, and beginner explanations across repository basics, inspection, staging, files, commits, branches, merging, history editing, recovery, stashes, and tags.
 - [x] Give every scenario learning objectives, prerequisites, and key concepts.
 - [x] Give every lesson 15 to 20 meaningful blocks with inspection before mutation and verification afterward.
 - [x] Display the current or previewed command prominently during playback.
@@ -293,11 +305,11 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## Final verification
 
-- [ ] Run all unit and integration tests.
-- [ ] Run the complete browser end-to-end suite.
-- [ ] Build the production bundle without TypeScript errors.
-- [ ] Confirm the large-chunk warning has been removed or intentionally documented.
-- [ ] Perform a desktop visual review at 1280x720, 1440x900, 1920x1080, and an ultrawide viewport.
+- [x] Run all unit and integration tests.
+- [x] Run the complete browser end-to-end suite.
+- [x] Build the production bundle without TypeScript errors.
+- [x] Confirm the large-chunk warning has been removed or intentionally documented.
+- [x] Perform a desktop visual review at 1280x720, 1440x900, 1920x1080, and an ultrawide viewport.
 - [ ] Verify both themes across every major screen and overlay.
 - [ ] Verify keyboard-only operation of every major feature.
 - [ ] Verify all commands shown in help and README behave as documented.

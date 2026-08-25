@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { SCENARIOS } from '../src/scenarios/data';
 
 describe('Scenarios Data Validation', () => {
-  it('bundles 25 to 30 substantial interactive learning scenarios', () => {
-    expect(SCENARIOS.length).toBeGreaterThanOrEqual(25);
-    expect(SCENARIOS.length).toBeLessThanOrEqual(30);
+  it('bundles 40 to 45 substantial interactive learning scenarios', () => {
+    expect(SCENARIOS.length).toBeGreaterThanOrEqual(40);
+    expect(SCENARIOS.length).toBeLessThanOrEqual(45);
   });
 
   it('validates scenario schema and metadata', () => {

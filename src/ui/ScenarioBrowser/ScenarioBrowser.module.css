@@ -67,9 +67,16 @@
 }
 .searchBox input { flex: 1; min-width: 0; color: var(--text-color); background: transparent; border: 0; outline: 0; font: inherit; font-size: 12px; }
 .searchBox input::placeholder { color: var(--text-muted); }
-.resultsMeta { margin: 12px 2px 8px; color: var(--text-muted); font-size: 11px; }
+.filters { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.difficultyFilters { display: flex; gap: 5px; }
+.difficultyFilters button { padding: 5px 8px; color: var(--text-secondary); background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 7px; font-size: 9px; cursor: pointer; }
+.difficultyFilters button:hover, .difficultyFilters .filterActive { color: var(--accent-color); border-color: var(--accent-color); background: color-mix(in srgb, var(--accent-color) 8%, var(--bg-color)); }
+.categoryFilter { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 9px; font-weight: 700; text-transform: uppercase; }
+.categoryFilter select { height: 28px; max-width: 180px; padding: 0 7px; color: var(--text-color); background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 7px; font-size: 9px; }
+.difficultyFilters button:focus-visible, .categoryFilter select:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+.resultsMeta { margin: 8px 2px; color: var(--text-muted); font-size: 11px; }
 
-.scenarioList { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: min(560px, calc(100vh - 225px)); overflow-y: auto; padding: 2px 4px 4px 2px; scrollbar-color: var(--border-color) transparent; }
+.scenarioList { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: min(520px, calc(100vh - 270px)); overflow-y: auto; padding: 2px 4px 4px 2px; scrollbar-color: var(--border-color) transparent; }
 .scenarioCard { display: flex; flex-direction: column; align-items: flex-start; min-height: 128px; padding: 12px; color: var(--text-color); background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 10px; cursor: pointer; text-align: left; transition: border-color 120ms ease, transform 120ms ease, background 120ms ease; }
 .scenarioCard:hover { border-color: color-mix(in srgb, var(--accent-color) 65%, var(--border-color)); background: var(--bg-tertiary); transform: translateY(-1px); }
 .selectedCard { border-color: var(--accent-color); box-shadow: inset 3px 0 0 var(--accent-color); }

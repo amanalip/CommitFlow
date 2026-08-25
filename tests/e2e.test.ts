@@ -88,9 +88,9 @@ describe('Browser End-to-End Test', () => {
     expect(await terminalRows.innerText()).toContain('CommitFlow Terminal');
 
     // The learning browser exposes deep lesson metadata and scenario steps echo in the terminal.
-    await page.getByRole('button', { name: /Learning scenarios 28/ }).click();
+    await page.getByRole('button', { name: /Learning scenarios 42/ }).click();
     expect(await page.getByRole('dialog', { name: 'Choose a learning scenario' }).isVisible()).toBe(true);
-    expect(await page.getByText('28 lessons available').isVisible()).toBe(true);
+    expect(await page.getByText('42 lessons available').isVisible()).toBe(true);
     await page.getByPlaceholder('Search commands, concepts, or difficulty').fill('first repo');
     await page.getByRole('button', { name: /Your First Repo/ }).click();
     const lessonControls = page.getByRole('region', { name: /Your First Repo learning controls/ });

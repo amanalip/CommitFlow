@@ -13,18 +13,22 @@ interface ScenarioBrowserProps {
 export function ScenarioBrowser({ selectedScenario, onSelectScenario, disabled = false }: ScenarioBrowserProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [difficulty, setDifficulty] = useState<'All' | Scenario['difficulty']>('All');
+  const [category, setCategory] = useState('All');
   const rootRef = useRef<HTMLDivElement>(null);
+  const categories = useMemo(() => ['All', ...Array.from(new Set(SCENARIOS.map((scenario) => scenario.category))).sort()], []);
 
   const scenarios = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return SCENARIOS;
     return SCENARIOS.filter((scenario) =>
-      [scenario.title, scenario.category, scenario.difficulty, scenario.summary, ...scenario.concepts]
-        .join(' ')
-        .toLowerCase()
-        .includes(normalized)
+      (difficulty === 'All' || scenario.difficulty === difficulty) &&
+      (category === 'All' || scenario.category === category) &&
+      (!normalized || [scenario.title, scenario.category, scenario.difficulty, scenario.summary, ...scenario.concepts]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalized))
     );
-  }, [query]);
+  }, [category, difficulty, query]);
 
   useEffect(() => {
     if (!open) return;
@@ -74,6 +78,20 @@ export function ScenarioBrowser({ selectedScenario, onSelectScenario, disabled =
             <Search size={15} aria-hidden="true" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search commands, concepts, or difficulty" autoFocus />
           </label>
+
+          <div className={styles.filters}>
+            <div className={styles.difficultyFilters} aria-label="Filter lessons by difficulty">
+              {(['All', 'Beginner', 'Intermediate', 'Advanced'] as const).map((item) => (
+                <button type="button" key={item} className={difficulty === item ? styles.filterActive : ''} onClick={() => setDifficulty(item)} aria-pressed={difficulty === item}>{item}</button>
+              ))}
+            </div>
+            <label className={styles.categoryFilter}>
+              <span>Topic</span>
+              <select value={category} onChange={(event) => setCategory(event.target.value)}>
+                {categories.map((item) => <option key={item} value={item}>{item === 'All' ? 'All topics' : item}</option>)}
+              </select>
+            </label>
+          </div>
 
           <div className={styles.resultsMeta}>{scenarios.length} lessons available</div>
           <div className={styles.scenarioList}>
