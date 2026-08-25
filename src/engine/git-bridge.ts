@@ -132,6 +132,9 @@ class GitBridge {
           break;
         case 'GET_STATE':
           break;
+        case 'SET_COMMIT_TIME':
+          workerEngine.setCommitTimestamp(payload.timestamp);
+          break;
         default:
           throw new Error(`Unknown bridge operation: ${type}`);
       }

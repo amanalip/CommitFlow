@@ -1,6 +1,6 @@
-import { Scenario } from '../../model/types';
+import { Scenario, ScenarioStep } from '../../model/types';
 
-export const SCENARIOS: Scenario[] = [
+const BASE_SCENARIOS: Scenario[] = [
   {
     id: 'your-first-repo',
     title: 'Your First Repo',
@@ -656,4 +656,342 @@ export const SCENARIOS: Scenario[] = [
       { command: 'git show v1.0.0', description: 'Inspect the tagged release', explanation: 'Resolves the release name to its commit metadata.' },
     ],
   },
+  {
+    id: 'building-atomic-commits', title: 'Building Atomic Commits', category: 'Commits', difficulty: 'Beginner',
+    summary: 'Turn a mixed batch of work into small commits that are easy to understand and undo.',
+    description: 'Practice inspecting, selecting, and verifying one purpose at a time instead of committing every changed file together.',
+    estimatedMinutes: 11, learningObjectives: ['Separate unrelated work', 'Write purposeful messages', 'Verify each snapshot'], concepts: ['atomic commit', 'staging', 'commit message', 'review'], prerequisites: ['Staging with Precision'],
+    steps: [
+      { command: 'git init', description: 'Create the practice repository', explanation: 'Initializes main with an empty history.' },
+      { command: 'echo "navigation component" > navigation.js', description: 'Create a feature file', explanation: 'Adds application code to the working tree.' },
+      { command: 'echo "Navigation usage" > NAVIGATION.md', description: 'Create documentation', explanation: 'Adds related documentation as a separate file.' },
+      { command: 'echo "temporary notes" > scratch.txt', description: 'Create unrelated notes', explanation: 'Adds work that should not enter either product commit.' },
+      { command: 'git status --short', description: 'Survey the mixed work', explanation: 'Lists all three untracked files before making a staging decision.' },
+      { command: 'git add navigation.js', description: 'Select only the feature', explanation: 'Stages the application code and leaves documentation and notes untouched.' },
+      { command: 'git diff --staged', description: 'Review the feature snapshot', explanation: 'Confirms the next commit contains only navigation.js.' },
+      { command: 'git commit -m "feat: add navigation component"', description: 'Record the feature commit', explanation: 'Creates a focused product commit.' },
+      { command: 'git status --short', description: 'Reassess remaining files', explanation: 'Shows that NAVIGATION.md and scratch.txt were not accidentally committed.' },
+      { command: 'git add NAVIGATION.md', description: 'Select the documentation', explanation: 'Stages only the user-facing guide.' },
+      { command: 'git commit -m "docs: explain navigation usage"', description: 'Record the documentation commit', explanation: 'Creates a second focused commit.' },
+      { command: 'git log --oneline', description: 'Audit commit intent', explanation: 'Shows two readable commits instead of one mixed snapshot.' },
+      { command: 'git status', description: 'Confirm unrelated work remains', explanation: 'Shows scratch.txt still untracked and safely outside history.' },
+    ],
+  },
+  {
+    id: 'recording-file-deletions', title: 'Recording File Deletions', category: 'Files', difficulty: 'Beginner',
+    summary: 'Remove a tracked file with git rm and verify the staged deletion before committing.',
+    description: 'Learn why deleting a tracked file is a repository change that belongs in a commit.',
+    estimatedMinutes: 8, learningObjectives: ['Remove a tracked file', 'Read staged deletion status', 'Commit repository cleanup'], concepts: ['git rm', 'tracked deletion', 'index'], prerequisites: ['Reading Repository State'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates an empty repository.' },
+      { command: 'echo "legacy configuration" > legacy.conf', description: 'Create a file to retire', explanation: 'Adds the future cleanup target.' },
+      { command: 'git add legacy.conf', description: 'Stage the file', explanation: 'Prepares the baseline.' },
+      { command: 'git commit -m "chore: add legacy configuration"', description: 'Commit the baseline', explanation: 'Makes legacy.conf a tracked file.' },
+      { command: 'git rm legacy.conf', description: 'Remove and stage the deletion', explanation: 'Deletes the working file and records its removal in the index.', expectedStateNote: 'legacy.conf is staged as deleted.' },
+      { command: 'git status --short', description: 'Inspect the deletion marker', explanation: 'Shows the deletion in the staged status column.' },
+      { command: 'git diff --staged', description: 'Review the cleanup snapshot', explanation: 'Inspects what will be removed by the next commit.' },
+      { command: 'git commit -m "chore: remove legacy configuration"', description: 'Record the deletion', explanation: 'Creates a cleanup commit that removes the tracked file.' },
+      { command: 'ls', description: 'Verify the file is gone', explanation: 'Confirms legacy.conf is absent from the working directory.' },
+      { command: 'git log --oneline', description: 'Read the cleanup history', explanation: 'Shows the addition and later removal as separate decisions.' },
+    ],
+  },
+  {
+    id: 'stop-tracking-local-files', title: 'Stop Tracking Local Files', category: 'Files', difficulty: 'Intermediate',
+    summary: 'Remove a file from Git while keeping the local working copy with git rm --cached.',
+    description: 'Understand the difference between deleting a file and removing only its staged tracking entry.',
+    estimatedMinutes: 9, learningObjectives: ['Remove a file from the index', 'Keep its local contents', 'Commit the tracking change'], concepts: ['git rm --cached', 'index', 'working copy'], prerequisites: ['Recording File Deletions'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates an empty repository.' },
+      { command: 'echo "LOCAL_TOKEN=demo" > local.env', description: 'Create local configuration', explanation: 'Adds a file that should remain on the machine.' },
+      { command: 'git add local.env', description: 'Stage the file', explanation: 'Simulates accidentally selecting local configuration.' },
+      { command: 'git commit -m "chore: add local environment"', description: 'Commit the accidental tracking', explanation: 'Makes local.env part of repository history.' },
+      { command: 'git rm --cached local.env', description: 'Remove only the tracking entry', explanation: 'Stages removal from Git but leaves the working file intact.', expectedStateNote: 'A staged deletion and an untracked local.env are both visible.' },
+      { command: 'git status --short', description: 'Read the two states', explanation: 'Shows the staged repository deletion and preserved local copy.' },
+      { command: 'cat local.env', description: 'Verify local contents remain', explanation: 'Confirms the file was not deleted from the working directory.' },
+      { command: 'git commit -m "chore: stop tracking local environment"', description: 'Commit the tracking correction', explanation: 'Removes local.env from the committed tree.' },
+      { command: 'git status', description: 'Verify the local-only file', explanation: 'Shows local.env as untracked after the correction.' },
+    ],
+  },
+  {
+    id: 'switching-between-branches', title: 'Switching Between Branches', category: 'Branches', difficulty: 'Beginner',
+    summary: 'Move between branches and use the previous-branch shortcut without losing context.',
+    description: 'Practice reading HEAD and using git checkout - to return to where you were.',
+    estimatedMinutes: 9, learningObjectives: ['Create parallel branches', 'Identify the active branch', 'Use the previous-branch shortcut'], concepts: ['checkout', 'HEAD', 'previous branch'], prerequisites: ['Branching & Merging'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "base" > project.txt', description: 'Create shared content', explanation: 'Adds the common file.' },
+      { command: 'git add project.txt', description: 'Stage shared content', explanation: 'Prepares the root commit.' },
+      { command: 'git commit -m "chore: create project base"', description: 'Create common history', explanation: 'Records the ancestor for every branch.' },
+      { command: 'git checkout -b feature/one', description: 'Create the first feature branch', explanation: 'Moves HEAD to feature/one.' },
+      { command: 'echo "feature one" > one.txt', description: 'Add branch-specific work', explanation: 'Creates content only on feature/one.' },
+      { command: 'git add one.txt', description: 'Stage branch work', explanation: 'Prepares the feature commit.' },
+      { command: 'git commit -m "feat: add first feature"', description: 'Advance feature/one', explanation: 'Moves only feature/one forward.' },
+      { command: 'git checkout main', description: 'Return to main', explanation: 'Moves HEAD and restores the main working tree.' },
+      { command: 'git checkout -', description: 'Jump to the previous branch', explanation: 'Returns directly to feature/one.' },
+      { command: 'git status', description: 'Verify the active branch', explanation: 'Confirms HEAD is attached to feature/one.' },
+    ],
+  },
+  {
+    id: 'renaming-a-branch', title: 'Renaming a Branch', category: 'Branches', difficulty: 'Beginner',
+    summary: 'Correct a branch name while preserving every commit it points to.',
+    description: 'See that branches are movable names, not containers that own commits.',
+    estimatedMinutes: 8, learningObjectives: ['Rename the current branch', 'Preserve its target commit', 'Read updated refs'], concepts: ['branch rename', 'reference', 'HEAD'], prerequisites: ['Branching & Merging'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "profile feature" > profile.js', description: 'Create feature content', explanation: 'Adds a file before naming the feature branch.' },
+      { command: 'git add profile.js', description: 'Stage feature content', explanation: 'Prepares the root snapshot.' },
+      { command: 'git commit -m "feat: add profile foundation"', description: 'Commit the foundation', explanation: 'Creates a commit to reference.' },
+      { command: 'git checkout -b feat/profle', description: 'Create a misspelled branch', explanation: 'Attaches HEAD to the new branch name.' },
+      { command: 'git branch -m feature/profile', description: 'Rename the current branch', explanation: 'Changes the reference name without changing its commit.', expectedStateNote: 'HEAD is attached to feature/profile at the same commit.' },
+      { command: 'git branch', description: 'List branch names', explanation: 'Confirms the corrected name is current.' },
+      { command: 'git log --oneline', description: 'Verify history is unchanged', explanation: 'Shows the original commit ID is preserved.' },
+    ],
+  },
+  {
+    id: 'cleaning-merged-branches', title: 'Cleaning Merged Branches', category: 'Branches', difficulty: 'Intermediate',
+    summary: 'Merge completed work and remove the branch name without deleting its commits.',
+    description: 'Learn why deleting a merged branch is reference cleanup, not history deletion.',
+    estimatedMinutes: 10, learningObjectives: ['Merge completed work', 'Delete a merged branch safely', 'Confirm commits remain reachable'], concepts: ['merged branch', 'branch deletion', 'reachability'], prerequisites: ['Branching & Merging'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "base" > app.txt', description: 'Create the base', explanation: 'Adds shared content.' },
+      { command: 'git add app.txt', description: 'Stage the base', explanation: 'Prepares the root commit.' },
+      { command: 'git commit -m "chore: create app base"', description: 'Commit the base', explanation: 'Creates common history.' },
+      { command: 'git checkout -b feature/banner', description: 'Create a feature branch', explanation: 'Moves HEAD to feature/banner.' },
+      { command: 'echo "banner" > banner.txt', description: 'Build the feature', explanation: 'Adds branch-specific work.' },
+      { command: 'git add banner.txt', description: 'Stage the feature', explanation: 'Prepares the feature snapshot.' },
+      { command: 'git commit -m "feat: add banner"', description: 'Commit the feature', explanation: 'Advances feature/banner.' },
+      { command: 'git checkout main', description: 'Return to main', explanation: 'Moves HEAD back to main.' },
+      { command: 'git merge feature/banner', description: 'Integrate the branch', explanation: 'Fast-forwards main to include the feature commit.' },
+      { command: 'git branch -d feature/banner', description: 'Delete the merged branch name', explanation: 'Removes the redundant reference while the commit remains on main.' },
+      { command: 'git log --oneline', description: 'Confirm history remains', explanation: 'Shows the banner commit still reachable from main.' },
+    ],
+  },
+  {
+    id: 'managing-release-tags', title: 'Managing Release Tags', category: 'Tags', difficulty: 'Intermediate',
+    summary: 'Create, inspect, move beyond, and remove a release tag without changing commits.',
+    description: 'Treat tags as stable labels for important history points and understand their independent lifecycle.',
+    estimatedMinutes: 9, learningObjectives: ['Create a release tag', 'Inspect its target', 'Delete only the label'], concepts: ['tag', 'reference', 'release point'], prerequisites: ['Tagging Releases'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "1.0" > VERSION', description: 'Create a version file', explanation: 'Adds release metadata.' },
+      { command: 'git add VERSION', description: 'Stage the version', explanation: 'Prepares the release commit.' },
+      { command: 'git commit -m "release: version 1.0"', description: 'Commit the release', explanation: 'Creates the release snapshot.' },
+      { command: 'git tag v1.0.0', description: 'Mark the release', explanation: 'Creates a stable tag at HEAD.' },
+      { command: 'git show v1.0.0', description: 'Inspect the tagged commit', explanation: 'Resolves the tag and displays its metadata.' },
+      { command: 'echo "1.1" > VERSION', description: 'Prepare the next version', explanation: 'Changes the working file while the tag stays fixed.' },
+      { command: 'git add VERSION', description: 'Stage the next version', explanation: 'Prepares another snapshot.' },
+      { command: 'git commit -m "release: version 1.1"', description: 'Advance main', explanation: 'Moves HEAD beyond v1.0.0.' },
+      { command: 'git tag -d v1.0.0', description: 'Delete the old label', explanation: 'Removes only the tag reference, not its commit.' },
+      { command: 'git log --oneline', description: 'Verify commits remain', explanation: 'Shows both release commits are still in history.' },
+    ],
+  },
+  {
+    id: 'staged-and-unstaged-together', title: 'Staged and Unstaged Together', category: 'Staging', difficulty: 'Intermediate',
+    summary: 'See how one file can contain a staged snapshot plus newer unstaged edits.',
+    description: 'Build an accurate mental model of the three versions Git can track for one path at the same time.',
+    estimatedMinutes: 11, learningObjectives: ['Create split file state', 'Compare both diffs', 'Commit only the staged version'], concepts: ['HEAD', 'index', 'working tree', 'partial state'], prerequisites: ['Reading Repository State'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "line one" > notes.txt', description: 'Create the baseline', explanation: 'Adds the initial file.' },
+      { command: 'git add notes.txt', description: 'Stage the baseline', explanation: 'Prepares the root snapshot.' },
+      { command: 'git commit -m "docs: add notes"', description: 'Commit the baseline', explanation: 'Creates the HEAD version.' },
+      { command: 'echo "line two" >> notes.txt', description: 'Add the first change', explanation: 'Updates the working file.' },
+      { command: 'git add notes.txt', description: 'Stage line two', explanation: 'Copies this version into the index.' },
+      { command: 'echo "line three" >> notes.txt', description: 'Add a newer working change', explanation: 'Makes the working file differ from both HEAD and the index.' },
+      { command: 'git status --short', description: 'Read both status columns', explanation: 'Shows notes.txt modified in the index and working tree.' },
+      { command: 'git diff --staged', description: 'Inspect the staged version', explanation: 'Shows line two as part of the next commit.' },
+      { command: 'git diff', description: 'Inspect the newer working edit', explanation: 'Shows line three outside the staged snapshot.' },
+      { command: 'git commit -m "docs: add second note"', description: 'Commit only the staged version', explanation: 'Records line two while line three remains uncommitted.' },
+      { command: 'git status', description: 'Verify remaining work', explanation: 'Shows notes.txt still modified after the commit.' },
+      { command: 'git add notes.txt', description: 'Stage the final line', explanation: 'Prepares the remaining edit.' },
+      { command: 'git commit -m "docs: add third note"', description: 'Commit the remaining work', explanation: 'Records the final working version.' },
+    ],
+  },
+  {
+    id: 'committing-tracked-changes', title: 'Committing Tracked Changes with -am', category: 'Commits', difficulty: 'Intermediate',
+    summary: 'Use the -am shortcut safely and learn why it ignores new untracked files.',
+    description: 'Compare tracked modifications with new files before using a convenient combined option.',
+    estimatedMinutes: 9, learningObjectives: ['Recognize tracked files', 'Use combined commit flags', 'Avoid losing untracked work'], concepts: ['git commit -am', 'tracked file', 'untracked file'], prerequisites: ['Staging with Precision'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "tracked base" > tracked.txt', description: 'Create a tracked candidate', explanation: 'Adds the baseline file.' },
+      { command: 'git add tracked.txt', description: 'Stage the baseline', explanation: 'Prepares the first snapshot.' },
+      { command: 'git commit -m "chore: add tracked file"', description: 'Commit the baseline', explanation: 'Makes tracked.txt known to Git.' },
+      { command: 'echo "tracked update" >> tracked.txt', description: 'Modify the tracked file', explanation: 'Creates an unstaged tracked change.' },
+      { command: 'echo "new work" > new.txt', description: 'Create an untracked file', explanation: 'Adds a file that -a will not include.' },
+      { command: 'git status --short', description: 'Compare file classes', explanation: 'Shows one tracked modification and one untracked path.' },
+      { command: 'git commit -am "docs: update tracked file"', description: 'Stage and commit tracked changes', explanation: 'Stages modified tracked files and commits them in one command.', expectedStateNote: 'tracked.txt is committed; new.txt remains untracked.' },
+      { command: 'git status', description: 'Verify the shortcut boundary', explanation: 'Confirms new.txt was not included.' },
+      { command: 'git log --oneline', description: 'Inspect the new commit', explanation: 'Shows the tracked update in history.' },
+    ],
+  },
+  {
+    id: 'recovering-with-soft-reset', title: 'Recovering with Soft Reset', category: 'Reset', difficulty: 'Advanced',
+    summary: 'Move HEAD back while keeping the removed commit snapshot staged for correction.',
+    description: 'Use soft reset when the commit boundary or message is wrong but the selected content is still wanted.',
+    estimatedMinutes: 10, learningObjectives: ['Move HEAD backward', 'Preserve staged content', 'Create a corrected replacement commit'], concepts: ['reset --soft', 'HEAD', 'index'], prerequisites: ['Amending the Last Commit'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "stable" > app.txt', description: 'Create the baseline', explanation: 'Adds stable content.' },
+      { command: 'git add app.txt', description: 'Stage the baseline', explanation: 'Prepares the root commit.' },
+      { command: 'git commit -m "feat: stable version"', description: 'Commit the baseline', explanation: 'Creates the stable commit.' },
+      { command: 'echo "improved" > app.txt', description: 'Create the next version', explanation: 'Updates the tracked file.' },
+      { command: 'git add app.txt', description: 'Stage the update', explanation: 'Prepares the second commit.' },
+      { command: 'git commit -m "wip"', description: 'Create a poorly named commit', explanation: 'Records wanted content with an unhelpful message.' },
+      { command: 'git log --oneline', description: 'Inspect the mistake', explanation: 'Shows the WIP commit at HEAD.' },
+      { command: 'git reset --soft HEAD~1', description: 'Move HEAD back but keep the snapshot staged', explanation: 'Removes the WIP commit from the branch while preserving its content in the index.', expectedStateNote: 'History has one commit and app.txt is staged as modified.' },
+      { command: 'git status', description: 'Verify staged recovery', explanation: 'Shows the improved version ready to recommit.' },
+      { command: 'git commit -m "feat: improve application"', description: 'Create the corrected commit', explanation: 'Records the same content with a useful message and new ID.' },
+      { command: 'git log --oneline', description: 'Verify corrected history', explanation: 'Shows the stable and corrected commits.' },
+    ],
+  },
+  {
+    id: 'recovering-with-mixed-reset', title: 'Recovering with Mixed Reset', category: 'Reset', difficulty: 'Advanced',
+    summary: 'Move HEAD and reset the index while keeping the removed commit content as working changes.',
+    description: 'Use the default mixed reset when you want to reconsider what should be staged.',
+    estimatedMinutes: 10, learningObjectives: ['Reset HEAD and index', 'Preserve working files', 'Restage selectively'], concepts: ['reset --mixed', 'index', 'working tree'], prerequisites: ['Staging with Precision'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "base" > app.txt', description: 'Create the baseline', explanation: 'Adds stable content.' },
+      { command: 'git add app.txt', description: 'Stage the baseline', explanation: 'Prepares the root commit.' },
+      { command: 'git commit -m "feat: add base"', description: 'Commit the baseline', explanation: 'Creates the root commit.' },
+      { command: 'echo "application update" > app.txt', description: 'Modify the application', explanation: 'Creates wanted work.' },
+      { command: 'echo "debug notes" > debug.txt', description: 'Create unrelated debug work', explanation: 'Adds content that should be split out.' },
+      { command: 'git add app.txt debug.txt', description: 'Stage both files together', explanation: 'Prepares an overly broad snapshot.' },
+      { command: 'git commit -m "wip: mixed changes"', description: 'Commit the mixed work', explanation: 'Creates a commit that should be separated.' },
+      { command: 'git reset --mixed HEAD~1', description: 'Undo the commit and index selection', explanation: 'Moves HEAD back, resets the index, and preserves both working files.', expectedStateNote: 'app.txt is modified and debug.txt is untracked.' },
+      { command: 'git status --short', description: 'Inspect recovered work', explanation: 'Shows both changes outside the staging area.' },
+      { command: 'git add app.txt', description: 'Restage only product work', explanation: 'Selects the application update.' },
+      { command: 'git commit -m "feat: update application"', description: 'Create a focused replacement', explanation: 'Commits only app.txt.' },
+      { command: 'git status', description: 'Verify debug notes remain', explanation: 'Shows debug.txt still untracked.' },
+    ],
+  },
+  {
+    id: 'discarding-with-hard-reset', title: 'Discarding with Hard Reset', category: 'Reset', difficulty: 'Advanced',
+    summary: 'Reset HEAD, index, and tracked files after verifying that the unwanted work can be discarded.',
+    description: 'Learn the destructive boundary of hard reset through deliberate inspection before action.',
+    estimatedMinutes: 9, learningObjectives: ['Inspect before destructive reset', 'Reset all tracked states', 'Verify recovery point'], concepts: ['reset --hard', 'destructive action', 'recovery point'], prerequisites: ['Reading Repository State'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "known good" > app.txt', description: 'Create the recovery point', explanation: 'Adds stable content.' },
+      { command: 'git add app.txt', description: 'Stage stable content', explanation: 'Prepares the root commit.' },
+      { command: 'git commit -m "feat: known good version"', description: 'Commit the recovery point', explanation: 'Creates the version to return to.' },
+      { command: 'echo "broken release" > app.txt', description: 'Create a bad tracked version', explanation: 'Replaces stable content.' },
+      { command: 'git add app.txt', description: 'Stage the bad version', explanation: 'Moves the mistake into the index.' },
+      { command: 'git commit -m "feat: broken release"', description: 'Commit the mistake', explanation: 'Moves HEAD beyond the recovery point.' },
+      { command: 'echo "more broken work" > app.txt', description: 'Add another working mistake', explanation: 'Makes the working file differ from the bad commit.' },
+      { command: 'git status', description: 'Inspect what will be discarded', explanation: 'Shows the tracked working change before reset.' },
+      { command: 'git log --oneline', description: 'Identify the target commit', explanation: 'Confirms HEAD~1 is the known-good version.' },
+      { command: 'git reset --hard HEAD~1', description: 'Return every tracked state to known good', explanation: 'Moves HEAD, resets the index, and replaces the tracked working file.', expectedStateNote: 'Only the known-good commit remains on main and the tree is clean.' },
+      { command: 'cat app.txt', description: 'Verify restored content', explanation: 'Confirms known good is back in the working file.' },
+      { command: 'git status', description: 'Verify a clean repository', explanation: 'Shows no staged or unstaged tracked changes.' },
+    ],
+  },
+  {
+    id: 'reverting-an-older-change', title: 'Reverting an Older Change', category: 'Undoing', difficulty: 'Advanced',
+    summary: 'Reverse an older commit while preserving useful work committed afterward.',
+    description: 'See why revert applies an inverse change instead of replacing the entire current tree.',
+    estimatedMinutes: 11, learningObjectives: ['Target an older commit', 'Preserve later unrelated work', 'Read the new revert commit'], concepts: ['revert', 'inverse patch', 'non-destructive history'], prerequisites: ['Reading Commit History'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "safe setting" > config.txt', description: 'Create safe configuration', explanation: 'Adds the baseline.' },
+      { command: 'git add config.txt', description: 'Stage safe configuration', explanation: 'Prepares the root commit.' },
+      { command: 'git commit -m "chore: add safe configuration"', description: 'Commit the baseline', explanation: 'Creates the parent of the later mistake.' },
+      { command: 'echo "unsafe setting" > config.txt', description: 'Introduce a bad setting', explanation: 'Changes the tracked configuration.' },
+      { command: 'git add config.txt', description: 'Stage the bad setting', explanation: 'Prepares the problematic commit.' },
+      { command: 'git commit -m "chore: enable unsafe setting"', description: 'Commit the bad setting', explanation: 'Creates the commit that will later be reverted.' },
+      { command: 'echo "useful guide" > GUIDE.md', description: 'Add later useful work', explanation: 'Creates an unrelated file after the mistake.' },
+      { command: 'git add GUIDE.md', description: 'Stage the guide', explanation: 'Prepares the later commit.' },
+      { command: 'git commit -m "docs: add useful guide"', description: 'Commit later work', explanation: 'Advances HEAD while keeping the guide independent.' },
+      { command: 'git log --oneline', description: 'Locate the target', explanation: 'Shows the unsafe setting at HEAD~1 and useful guide at HEAD.' },
+      { command: 'git revert HEAD~1', description: 'Reverse only the unsafe setting', explanation: 'Creates a new inverse commit while preserving GUIDE.md.', expectedStateNote: 'config.txt is safe, GUIDE.md remains, and history gains a revert commit.' },
+      { command: 'cat config.txt', description: 'Verify the configuration', explanation: 'Confirms safe setting was restored.' },
+      { command: 'cat GUIDE.md', description: 'Verify later work survived', explanation: 'Confirms the unrelated guide remains.' },
+      { command: 'git log --oneline --graph', description: 'Read the complete history', explanation: 'Shows the original mistake, later work, and explicit revert.' },
+    ],
+  },
+  {
+    id: 'shipping-a-selective-hotfix', title: 'Shipping a Selective Hotfix', category: 'Advanced workflow', difficulty: 'Advanced',
+    summary: 'Copy one tested hotfix onto a release branch while leaving unrelated development behind.',
+    description: 'Use cherry-pick as a precise release tool and verify both file state and new commit identity.',
+    estimatedMinutes: 12, learningObjectives: ['Isolate a hotfix commit', 'Apply it to another branch', 'Preserve unrelated branch content'], concepts: ['cherry-pick', 'release branch', 'new commit identity'], prerequisites: ['Cherry-Picking'],
+    steps: [
+      { command: 'git init', description: 'Initialize the repository', explanation: 'Creates main.' },
+      { command: 'echo "release base" > app.txt', description: 'Create release content', explanation: 'Adds the common baseline.' },
+      { command: 'git add app.txt', description: 'Stage the baseline', explanation: 'Prepares the root commit.' },
+      { command: 'git commit -m "release: create stable base"', description: 'Commit the release base', explanation: 'Creates the shared ancestor.' },
+      { command: 'git branch release/1.x', description: 'Create the release branch', explanation: 'Marks the stable base without switching branches.' },
+      { command: 'git checkout -b development', description: 'Create the development branch', explanation: 'Moves HEAD to a branch for ongoing work.' },
+      { command: 'echo "future feature" > future.txt', description: 'Add unrelated development', explanation: 'Creates work that must not ship in the hotfix.' },
+      { command: 'git add future.txt', description: 'Stage future work', explanation: 'Prepares the development commit.' },
+      { command: 'git commit -m "feat: add future feature"', description: 'Commit future work', explanation: 'Advances development with unrelated content.' },
+      { command: 'echo "critical patch" > hotfix.txt', description: 'Create the hotfix', explanation: 'Adds the one change needed by the release branch.' },
+      { command: 'git add hotfix.txt', description: 'Stage the hotfix', explanation: 'Prepares a self-contained commit.' },
+      { command: 'git commit -m "fix: patch critical issue"', description: 'Commit the hotfix', explanation: 'Creates the source commit for cherry-pick.' },
+      { command: 'git checkout release/1.x', description: 'Switch to the release branch', explanation: 'Restores the stable release tree without future.txt.' },
+      { command: 'git cherry-pick development', description: 'Copy the latest development commit', explanation: 'Applies only the hotfix change as a new release commit.', expectedStateNote: 'hotfix.txt exists, future.txt does not, and the copied commit has a new ID.' },
+      { command: 'ls', description: 'Verify shipped files', explanation: 'Shows app.txt and hotfix.txt without future.txt.' },
+      { command: 'git log --oneline --graph', description: 'Inspect release history', explanation: 'Shows a compact release line with the new hotfix commit.' },
+    ],
+  },
 ];
+
+function verificationStepFor(step: ScenarioStep): ScenarioStep | null {
+  if (step.command === 'git init') {
+    return { command: 'git status', description: 'Confirm the starting state', explanation: 'Verifies the active branch, empty history, and clean working tree before continuing.', expectedStateNote: 'The repository is initialized and ready for work.' };
+  }
+  if (/^(echo|touch|rm)\b/.test(step.command)) {
+    return { command: 'git status --short', description: 'Check the file-state change', explanation: 'Uses compact status to connect the filesystem action to Git state.', expectedStateNote: 'The affected path appears in the working-tree status column.' };
+  }
+  if (/^git add\b/.test(step.command)) {
+    return { command: 'git diff --staged', description: 'Verify the selected snapshot', explanation: 'Reviews what is in the index before any commit is created.', expectedStateNote: 'The staged patch matches the intended next snapshot.' };
+  }
+  if (/^git commit\b/.test(step.command)) {
+    return { command: 'git log --oneline --graph', description: 'Verify the new history point', explanation: 'Shows the new commit ID, message, and position relative to earlier commits.', expectedStateNote: 'HEAD and the current branch point to the new commit.' };
+  }
+  if (/^git (checkout|switch|branch)\b/.test(step.command)) {
+    return { command: 'git status', description: 'Verify HEAD and branch context', explanation: 'Confirms which branch or detached commit is active after the reference change.', expectedStateNote: 'The status header names the expected HEAD location.' };
+  }
+  if (/^git (merge|rebase|cherry-pick|revert|reset)\b/.test(step.command)) {
+    return { command: 'git log --oneline --graph', description: 'Inspect the resulting topology', explanation: 'Connects the history-changing command to the commit graph and resulting IDs.', expectedStateNote: 'The graph now reflects the command’s history behavior.' };
+  }
+  if (/^git (restore|rm|stash)\b/.test(step.command)) {
+    return { command: 'git status --short', description: 'Verify the repository areas affected', explanation: 'Checks the working tree and staging area immediately after the recovery action.', expectedStateNote: 'Status confirms what was preserved, moved, or removed.' };
+  }
+  if (/^git tag\b/.test(step.command)) {
+    return { command: 'git show HEAD', description: 'Inspect the referenced commit', explanation: 'Shows the commit metadata associated with the current release point.', expectedStateNote: 'The commit object remains unchanged while its tag reference is visible in the graph.' };
+  }
+  return null;
+}
+
+function expandToGuidedLab(steps: ScenarioStep[]): ScenarioStep[] {
+  if (steps.length >= 15) return steps;
+  const expanded: ScenarioStep[] = [];
+
+  for (let index = 0; index < steps.length; index++) {
+    const step = steps[index];
+    expanded.push(step);
+    if (expanded.length >= 15) continue;
+    const verification = verificationStepFor(step);
+    const nextCommand = steps[index + 1]?.command;
+    if (verification && verification.command !== nextCommand) expanded.push(verification);
+  }
+
+  const wrapUpChecks: ScenarioStep[] = [
+    { command: 'git status', description: 'Confirm the final repository state', explanation: 'Connects the completed actions to the working tree, staging area, branch, and HEAD.', expectedStateNote: 'The final status matches the lesson goal.' },
+    { command: 'git log --oneline --graph', description: 'Review the completed history', explanation: 'Summarizes the commit topology, messages, and current HEAD position.', expectedStateNote: 'The final graph tells the complete story of the lesson.' },
+    { command: 'git show HEAD', description: 'Inspect the final commit object', explanation: 'Reviews the final commit ID, author, tree, parent relationship, and message.', expectedStateNote: 'HEAD metadata matches the final commit tile.' },
+  ];
+  for (const check of wrapUpChecks) {
+    if (expanded.length >= 15) break;
+    if (expanded.at(-1)?.command !== check.command) expanded.push(check);
+  }
+
+  return expanded.slice(0, 20);
+}
+
+export const SCENARIOS: Scenario[] = BASE_SCENARIOS.map((scenario) => ({
+  ...scenario,
+  steps: expandToGuidedLab(scenario.steps),
+}));

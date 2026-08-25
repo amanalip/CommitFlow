@@ -18,7 +18,12 @@ import { RepoState, CommitInfo, BranchRef, TagRef, WorkingFile } from '../model/
 
 const REPO_DIR = '/repo';
 
-let defaultAuthor = {
+let defaultAuthor: {
+  name: string;
+  email: string;
+  timestamp?: number;
+  timezoneOffset?: number;
+} = {
   name: 'CommitFlow User',
   email: 'user@commitflow.dev',
 };
@@ -51,7 +56,16 @@ export function restoreRuntime(context: GitRuntimeContext): void {
 }
 
 export function setAuthor(name: string, email: string) {
-  defaultAuthor = { name, email };
+  defaultAuthor = { ...defaultAuthor, name, email };
+}
+
+export function setCommitTimestamp(timestamp?: number) {
+  if (timestamp === undefined) {
+    const { name, email } = defaultAuthor;
+    defaultAuthor = { name, email };
+  } else {
+    defaultAuthor = { ...defaultAuthor, timestamp, timezoneOffset: 0 };
+  }
 }
 
 async function isRepoInitialized(): Promise<boolean> {
@@ -295,6 +309,9 @@ export async function snapshotRepoState(): Promise<RepoState> {
 
       if (headStatus === 0 && workdirStatus === 2 && stageStatus === 0) {
         untrackedFiles.push(filepath);
+      } else if (headStatus === 0 && workdirStatus === 2 && stageStatus === 3) {
+        stagedFiles.push({ path: filepath, status: 'added', staged: true, content });
+        unstagedFiles.push({ path: filepath, status: 'modified', staged: false, content });
       } else if (headStatus === 0 && workdirStatus === 2 && stageStatus === 2) {
         stagedFiles.push({
           path: filepath,
@@ -309,6 +326,9 @@ export async function snapshotRepoState(): Promise<RepoState> {
           staged: true,
           content,
         });
+      } else if (headStatus === 1 && workdirStatus === 2 && stageStatus === 3) {
+        stagedFiles.push({ path: filepath, status: 'modified', staged: true, content });
+        unstagedFiles.push({ path: filepath, status: 'modified', staged: false, content });
       } else if (headStatus === 1 && workdirStatus === 2 && stageStatus === 1) {
         unstagedFiles.push({
           path: filepath,
@@ -926,14 +946,14 @@ export async function executeDiff(staged = false): Promise<string> {
 
   for (const [filepath, headStatus, workdirStatus, stageStatus] of matrix) {
     if (staged) {
-      if (headStatus === 0 && stageStatus === 2) {
+      if (headStatus === 0 && stageStatus >= 2) {
         diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
         diffLines.push(`\x1b[32m+++ b/${filepath} (staged new file)\x1b[0m`);
         const content = await readTextFile(pfs, `${REPO_DIR}/${filepath}`);
         for (const line of content.split('\n')) {
           if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
         }
-      } else if (headStatus === 1 && stageStatus === 2) {
+      } else if (headStatus === 1 && stageStatus >= 2) {
         diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
         diffLines.push(`\x1b[33m--- a/${filepath}\x1b[0m`);
         diffLines.push(`\x1b[32m+++ b/${filepath} (staged modification)\x1b[0m`);
@@ -950,7 +970,7 @@ export async function executeDiff(staged = false): Promise<string> {
         for (const line of content.split('\n')) {
           if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
         }
-      } else if (workdirStatus === 2 && headStatus === 1 && stageStatus === 1) {
+      } else if (workdirStatus === 2 && headStatus === 1 && (stageStatus === 1 || stageStatus === 3)) {
         diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
         diffLines.push(`\x1b[33m--- a/${filepath}\x1b[0m`);
         diffLines.push(`\x1b[32m+++ b/${filepath}\x1b[0m`);

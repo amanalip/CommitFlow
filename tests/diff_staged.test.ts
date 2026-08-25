@@ -31,4 +31,28 @@ describe('Git Staged Diff Command', () => {
     expect(diffCachedRes.stdout).toContain('staged modification');
     expect(diffCachedRes.stdout).toContain('+ modified staged');
   });
+
+  it('tracks staged and unstaged versions of the same file independently', async () => {
+    await executeCommandLine('echo "base" > app.ts');
+    await executeCommandLine('git add app.ts');
+    await executeCommandLine('git commit -m "add app"');
+
+    await executeCommandLine('echo "staged line" >> app.ts');
+    await executeCommandLine('git add app.ts');
+    await executeCommandLine('echo "working line" >> app.ts');
+
+    const stateBeforeCommit = gitBridge.getState();
+    expect(stateBeforeCommit.stagedFiles.map((file) => file.path)).toContain('app.ts');
+    expect(stateBeforeCommit.unstagedFiles.map((file) => file.path)).toContain('app.ts');
+
+    const stagedDiff = await executeCommandLine('git diff --staged');
+    const workingDiff = await executeCommandLine('git diff');
+    expect(stagedDiff.stdout).toContain('+ staged line');
+    expect(workingDiff.stdout).toContain('+ working line');
+
+    const commit = await executeCommandLine('git commit -m "save staged work"');
+    expect(commit.exitCode).toBe(0);
+    expect(gitBridge.getState().stagedFiles.map((file) => file.path)).not.toContain('app.ts');
+    expect(gitBridge.getState().unstagedFiles.map((file) => file.path)).toContain('app.ts');
+  });
 });
