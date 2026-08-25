@@ -82,6 +82,7 @@ export type GitCommandType =
   | 'revert'
   | 'stash'
   | 'restore'
+  | 'shell-rm'
   | 'touch'
   | 'echo'
   | 'cat'

@@ -242,6 +242,16 @@ export async function snapshotRepoState(): Promise<RepoState> {
   const stagedFiles: WorkingFile[] = [];
   const unstagedFiles: WorkingFile[] = [];
   const untrackedFiles: string[] = [];
+  let headTreeOid = '';
+
+  if (headOid) {
+    try {
+      const headCommit = await git.readCommit({ fs, dir: REPO_DIR, oid: headOid });
+      headTreeOid = headCommit.commit.tree;
+    } catch {
+      headTreeOid = '';
+    }
+  }
 
   try {
     const matrix = await git.statusMatrix({ fs, dir: REPO_DIR });
@@ -272,12 +282,37 @@ export async function snapshotRepoState(): Promise<RepoState> {
           staged: false,
           content,
         });
+      } else if (headStatus === 1 && workdirStatus === 1 && stageStatus === 1 && headTreeOid) {
+        // LightningFS timestamps can have the same precision as the index. Compare
+        // contents so rapid same-size edits are not incorrectly reported as clean.
+        try {
+          const { blob } = await git.readBlob({ fs, dir: REPO_DIR, oid: headTreeOid, filepath });
+          const headContent = Buffer.from(blob).toString('utf8');
+          if (headContent !== content) {
+            unstagedFiles.push({
+              path: filepath,
+              status: 'modified',
+              staged: false,
+              content,
+              oldContent: headContent,
+            });
+          }
+        } catch {
+          // The status matrix remains the source of truth if content lookup fails.
+        }
       } else if (headStatus === 1 && workdirStatus === 0 && stageStatus === 0) {
         stagedFiles.push({
           path: filepath,
           status: 'deleted',
           staged: true,
         });
+      } else if (headStatus === 1 && workdirStatus > 0 && stageStatus === 0) {
+        stagedFiles.push({
+          path: filepath,
+          status: 'deleted',
+          staged: true,
+        });
+        untrackedFiles.push(filepath);
       } else if (headStatus === 1 && workdirStatus === 0 && stageStatus === 1) {
         unstagedFiles.push({
           path: filepath,
@@ -381,7 +416,11 @@ export async function executeRestore(filepaths: string[], staged = false): Promi
   for (const file of filepaths) {
     const cleanFile = file.replace(/^\.\//, '');
     if (staged) {
-      await git.resetIndex({ fs, dir: REPO_DIR, filepath: cleanFile });
+      try {
+        await git.resetIndex({ fs, dir: REPO_DIR, filepath: cleanFile });
+      } catch {
+        throw new Error(`error: pathspec '${cleanFile}' did not match any file(s) known to git`);
+      }
     } else {
       try {
         const headOid = await resolveCommitRef('HEAD');
@@ -390,7 +429,7 @@ export async function executeRestore(filepaths: string[], staged = false): Promi
         const str = Buffer.from(blob).toString('utf8');
         await writeTextFile(pfs, `${REPO_DIR}/${cleanFile}`, str);
       } catch {
-        // Untracked or deleted
+        throw new Error(`error: pathspec '${cleanFile}' did not match any file(s) known to git`);
       }
     }
   }

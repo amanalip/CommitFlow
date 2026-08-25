@@ -8,7 +8,8 @@ export function formatStatusOutput(state: RepoState, short = false): string {
   if (short) {
     const lines: string[] = [];
     for (const f of state.stagedFiles) {
-      lines.push(`\x1b[32mM  ${f.path}\x1b[0m`);
+      const code = f.status === 'added' ? 'A' : f.status === 'deleted' ? 'D' : 'M';
+      lines.push(`\x1b[32m${code}  ${f.path}\x1b[0m`);
     }
     for (const f of state.unstagedFiles) {
       lines.push(`\x1b[31m M ${f.path}\x1b[0m`);
@@ -106,7 +107,6 @@ export function formatLogOutput(commits: CommitInfo[], oneline = false, graph = 
       const lines = [
         `\x1b[33mcommit ${c.oid}\x1b[0m${refString}`,
         `Author: ${c.author.name} <${c.author.email}>`,
-        `Date:   ${dateStr}`,
         `Date:   ${dateStr}`,
         '',
         `    ${c.message}`,

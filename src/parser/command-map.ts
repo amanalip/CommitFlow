@@ -128,7 +128,7 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
     };
   }
 
-  if (parsed.type === 'rm') {
+  if (parsed.type === 'shell-rm') {
     if (parsed.args.length === 0) {
       return {
         rawCommand: rawInput,
@@ -284,6 +284,31 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
     };
   }
 
+  if (parsed.type === 'rm') {
+    if (parsed.args.length === 0) {
+      return {
+        rawCommand: rawInput,
+        stdout: '',
+        stderr: '\x1b[31mfatal: No pathspec was given. Which files should I remove?\x1b[0m',
+        exitCode: 128,
+        state,
+      };
+    }
+
+    const cached = Boolean(parsed.flags['cached']);
+    const res = await gitBridge.send('RM', { files: parsed.args, cached });
+    return {
+      rawCommand: rawInput,
+      stdout: res.output || '',
+      stderr: res.error ? `\x1b[31m${res.error}\x1b[0m` : '',
+      exitCode: res.success ? 0 : 1,
+      explanation: cached
+        ? `Removed from the staging area: ${parsed.args.join(', ')}.`
+        : `Removed and staged deletion for: ${parsed.args.join(', ')}.`,
+      state: res.state,
+    };
+  }
+
   if (parsed.type === 'add') {
     if (parsed.args.length === 0 && !parsed.flags['A'] && !parsed.flags['all'] && !parsed.flags['a']) {
       return {
@@ -320,6 +345,23 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
         explanation: 'Commit aborted because no message was provided with -m.',
         state,
       };
+    }
+
+    if (parsed.flags['a'] || parsed.flags['all']) {
+      const trackedChanges = state.unstagedFiles.map((file) => file.path);
+      if (trackedChanges.length > 0) {
+        const addRes = await gitBridge.send('ADD', { files: trackedChanges });
+        if (!addRes.success) {
+          return {
+            rawCommand: rawInput,
+            stdout: '',
+            stderr: `\x1b[31m${addRes.error}\x1b[0m`,
+            exitCode: 1,
+            state: addRes.state,
+          };
+        }
+        state = addRes.state;
+      }
     }
 
     if (state.stagedFiles.length === 0 && !parsed.flags['allow-empty'] && !parsed.flags['amend']) {

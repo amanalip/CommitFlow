@@ -1,4 +1,5 @@
 import { RepoState } from '../../model/types';
+import { quoteShellArg } from '../../parser/shell-quote';
 import styles from './StatePanel.module.css';
 
 interface WorkingDirPanelProps {
@@ -48,7 +49,7 @@ export function WorkingDirPanel({ repoState, onAction }: WorkingDirPanelProps) {
               <button
                 type="button"
                 className={styles.quickActionBtn}
-                onClick={() => onAction(`git add ${file.path}`)}
+                onClick={() => onAction(`git add ${quoteShellArg(file.path)}`)}
                 title={`Stage ${file.path}`}
               >
                 + Stage
@@ -67,7 +68,7 @@ export function WorkingDirPanel({ repoState, onAction }: WorkingDirPanelProps) {
               <button
                 type="button"
                 className={styles.quickActionBtn}
-                onClick={() => onAction(`git add ${path}`)}
+                onClick={() => onAction(`git add ${quoteShellArg(path)}`)}
                 title={`Stage ${path}`}
               >
                 + Stage

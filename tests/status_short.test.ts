@@ -14,7 +14,7 @@ describe('Git Short Status & Log Limits', () => {
 
     const statusRes = await executeCommandLine('git status -s');
     expect(statusRes.exitCode).toBe(0);
-    expect(statusRes.stdout).toContain('M  a.js');
+    expect(statusRes.stdout).toContain('A  a.js');
     expect(statusRes.stdout).toContain('?? b.js');
   });
 

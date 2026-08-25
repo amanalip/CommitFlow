@@ -39,4 +39,23 @@ describe('Git Restore Command', () => {
     expect(gitBridge.getState().stagedFiles.length).toBe(0);
     expect(gitBridge.getState().unstagedFiles.length).toBe(1);
   });
+
+  it('unstages only the selected quoted path', async () => {
+    await executeCommandLine('echo "one" > "first file.txt"');
+    await executeCommandLine('echo "two" > second.txt');
+    await executeCommandLine('git add "first file.txt" second.txt');
+
+    const result = await executeCommandLine('git restore --staged "first file.txt"');
+
+    expect(result.exitCode).toBe(0);
+    expect(result.state.stagedFiles.map((file) => file.path)).toEqual(['second.txt']);
+    expect(result.state.untrackedFiles).toContain('first file.txt');
+  });
+
+  it('reports an error for a path Git does not know', async () => {
+    const result = await executeCommandLine('git restore missing.txt');
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("pathspec 'missing.txt'");
+  });
 });

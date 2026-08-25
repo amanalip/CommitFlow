@@ -119,6 +119,12 @@ describe('Command Parser', () => {
     expect(parsed.append).toBe(true);
   });
 
+  it('parses quoted redirection targets containing spaces', () => {
+    const parsed = parseCommand('echo "guide" > "docs guide.md"');
+    expect(parsed.targetFile).toBe('docs guide.md');
+    expect(parsed.fileContent).toBe('guide\n');
+  });
+
   it('parses filesystem utility commands (touch, cat, ls, clear)', () => {
     const pTouch = parseCommand('touch a.js b.js');
     expect(pTouch.type).toBe('touch');
@@ -133,6 +139,34 @@ describe('Command Parser', () => {
 
     const pClear = parseCommand('clear');
     expect(pClear.type).toBe('clear');
+
+    const pRm = parseCommand('rm a.js');
+    expect(pRm.type).toBe('shell-rm');
+  });
+
+  it('distinguishes git rm from shell rm', () => {
+    const parsed = parseCommand('git rm --cached tracked.txt');
+    expect(parsed.type).toBe('rm');
+    expect(parsed.flags['cached']).toBe(true);
+    expect(parsed.args).toEqual(['tracked.txt']);
+  });
+
+  it('parses common combined commit flags', () => {
+    const parsed = parseCommand('git commit -am "fix: combined flags"');
+    expect(parsed.type).toBe('commit');
+    expect(parsed.flags['a']).toBe(true);
+    expect(parsed.flags['m']).toBe('fix: combined flags');
+  });
+
+  it('respects the end-of-options separator', () => {
+    const parsed = parseCommand('git add -- -generated.txt');
+    expect(parsed.type).toBe('add');
+    expect(parsed.args).toEqual(['-generated.txt']);
+  });
+
+  it('reports unmatched quotes and trailing escapes', () => {
+    expect(parseCommand('git commit -m "unfinished').error).toBe('unterminated quoted string');
+    expect(parseCommand('git add file\\').error).toBe('unterminated escape sequence');
   });
 
   it('parses git branch delete flags -d, -D, and --delete', () => {

@@ -122,6 +122,26 @@ export function parseCommand(rawInput: string): ParsedCommand {
     }
   }
 
+  if (escape) {
+    return {
+      raw: rawInput,
+      type: 'unknown',
+      args: [],
+      flags: {},
+      error: 'unterminated escape sequence',
+    };
+  }
+
+  if (inDouble || inSingle) {
+    return {
+      raw: rawInput,
+      type: 'unknown',
+      args: [],
+      flags: {},
+      error: 'unterminated quoted string',
+    };
+  }
+
   if (redirectIndex !== -1) {
     const leftPart = trimmed.slice(0, redirectIndex).trim();
     const rightPart = trimmed.slice(redirectIndex + (isAppend ? 2 : 1)).trim();
@@ -130,7 +150,7 @@ export function parseCommand(rawInput: string): ParsedCommand {
 
     if (firstLeft === 'echo') {
       const content = leftTokens.slice(1).join(' ');
-      const targetFile = rightPart.split(/\s+/)[0];
+      const targetFile = tokenizeCommandLine(rightPart)[0];
       return {
         raw: rawInput,
         type: 'echo',
@@ -176,7 +196,7 @@ export function parseCommand(rawInput: string): ParsedCommand {
   if (firstToken === 'rm') {
     return {
       raw: rawInput,
-      type: 'rm',
+      type: 'shell-rm',
       args: tokens.slice(1),
       flags: {},
     };
@@ -232,11 +252,18 @@ export function parseCommand(rawInput: string): ParsedCommand {
   const rest = tokens.slice(2);
   const flags: Record<string, string | boolean | string[]> = {};
   const positionalArgs: string[] = [];
+  let endOfOptions = false;
 
   for (let i = 0; i < rest.length; i++) {
     const token = rest[i];
 
+    if (endOfOptions) {
+      positionalArgs.push(token);
+      continue;
+    }
+
     if (token === '--') {
+      endOfOptions = true;
       continue;
     }
 
@@ -259,7 +286,15 @@ export function parseCommand(rawInput: string): ParsedCommand {
       }
     } else if (token.startsWith('-') && token.length > 1) {
       const flagName = token.slice(1);
-      if (flagName === 'm' && i + 1 < rest.length) {
+      if (subcommand === 'commit' && flagName.length > 1 && flagName.endsWith('m') && i + 1 < rest.length) {
+        for (const char of flagName.slice(0, -1)) {
+          flags[char] = true;
+        }
+        flags['m'] = rest[i + 1];
+        i++;
+      } else if (subcommand === 'commit' && flagName.startsWith('m') && flagName.length > 1) {
+        flags['m'] = flagName.slice(1);
+      } else if (flagName === 'm' && i + 1 < rest.length) {
         flags['m'] = rest[i + 1];
         i++;
       } else if (flagName === 'b' && i + 1 < rest.length) {

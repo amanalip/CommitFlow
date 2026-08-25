@@ -1,4 +1,5 @@
 import { RepoState } from '../../model/types';
+import { quoteShellArg } from '../../parser/shell-quote';
 import styles from './StatePanel.module.css';
 
 interface StagingPanelProps {
@@ -40,7 +41,7 @@ export function StagingPanel({ repoState, onAction }: StagingPanelProps) {
               <button
                 type="button"
                 className={styles.quickActionBtn}
-                onClick={() => onAction(`git reset HEAD ${file.path}`)}
+                onClick={() => onAction(`git restore --staged ${quoteShellArg(file.path)}`)}
                 title={`Unstage ${file.path}`}
               >
                 − Unstage

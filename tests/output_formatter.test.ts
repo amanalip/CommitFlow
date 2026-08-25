@@ -57,6 +57,29 @@ describe('Output Formatter', () => {
     expect(output).toContain('newfile.txt');
   });
 
+  it('uses accurate short-status codes for staged changes', () => {
+    const state: RepoState = {
+      initialized: true,
+      head: { type: 'branch', target: 'main' },
+      branches: [{ name: 'main', oid: '111', isCurrent: true }],
+      tags: [],
+      commits: [],
+      stagedFiles: [
+        { path: 'added.js', status: 'added', staged: true },
+        { path: 'changed.js', status: 'modified', staged: true },
+        { path: 'removed.js', status: 'deleted', staged: true },
+      ],
+      unstagedFiles: [],
+      untrackedFiles: [],
+      stashes: [],
+    };
+
+    const output = formatStatusOutput(state, true);
+    expect(output).toContain('A  added.js');
+    expect(output).toContain('M  changed.js');
+    expect(output).toContain('D  removed.js');
+  });
+
   it('formats status output for detached HEAD', () => {
     const state: RepoState = {
       initialized: true,
@@ -93,6 +116,7 @@ describe('Output Formatter', () => {
     expect(standard).toContain('commit a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2');
     expect(standard).toContain('Author: Alice <alice@example.com>');
     expect(standard).toContain('Initial commit');
+    expect(standard.match(/Date:/g)?.length).toBe(1);
 
     const oneline = formatLogOutput(commits, true, false);
     expect(oneline).toContain('a1b2c3d');

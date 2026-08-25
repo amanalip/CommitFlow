@@ -9,21 +9,21 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Stop and cancel scenario playback when changing modes, resetting the repository, or loading shared history.
 - [ ] Add a serialized command queue so terminal commands, quick actions, scenarios, Explainer runs, URL replay, and Reset cannot mutate the engine concurrently.
 - [ ] Prevent Explainer preset buttons from starting overlapping simulations while another simulation is running.
-- [ ] Distinguish shell `rm` from `git rm` in the parsed command model.
-- [ ] Route `git rm` and `git rm --cached` to the Git engine instead of the filesystem-only delete handler.
+- [x] Distinguish shell `rm` from `git rm` in the parsed command model.
+- [x] Route `git rm` and `git rm --cached` to the Git engine instead of the filesystem-only delete handler.
 - [ ] Correct cherry-pick so it applies the selected commit's changes and produces the expected working tree and index.
 - [ ] Correct rebase so it reapplies each commit's tree changes instead of only recreating commit messages.
 - [ ] Correct revert so it applies an inverse patch to the current tree without replacing unrelated later changes.
 - [ ] Verify and correct soft, mixed, and hard reset behavior, including index contents, working tree contents, and whether HEAD stays attached to the current branch.
 - [ ] Make `git branch -d` enforce merged-branch safety while keeping `-D` as the force-delete path.
-- [ ] Return an error when `git restore` targets a missing or untracked path instead of silently succeeding.
+- [x] Return an error when `git restore` targets a missing or untracked path instead of silently succeeding.
 - [ ] Preserve staged, unstaged, deleted, and untracked file contents correctly through stash push and pop.
 - [ ] Support selecting a specific stash or only show Pop on the top stash so every row does not pop `stash@{0}`.
-- [ ] Fix short status output to report `A`, `M`, and `D` accurately for staged files.
-- [ ] Remove the duplicate `Date:` line from standard `git log` output.
-- [ ] Support common combined flags such as `git commit -am "message"`, or clearly reject unsupported combined forms.
-- [ ] Respect `--` as the end of options so filenames beginning with a hyphen are treated as positional arguments.
-- [ ] Detect unmatched quotes and trailing escape characters and return a helpful parser error.
+- [x] Fix short status output to report `A`, `M`, and `D` accurately for staged files.
+- [x] Remove the duplicate `Date:` line from standard `git log` output.
+- [x] Support common combined flags such as `git commit -am "message"`, or clearly reject unsupported combined forms.
+- [x] Respect `--` as the end of options so filenames beginning with a hyphen are treated as positional arguments.
+- [x] Detect unmatched quotes and trailing escape characters and return a helpful parser error.
 
 ## P0: Terminal lifecycle and interaction
 
@@ -131,8 +131,8 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## P1: State panels and quick actions
 
-- [ ] Change individual Unstage to `git restore --staged <file>`.
-- [ ] Shell-quote filenames used in quick actions so paths containing spaces work.
+- [x] Change individual Unstage to `git restore --staged <file>`.
+- [x] Shell-quote filenames used in quick actions so paths containing spaces work.
 - [ ] Show the command a quick action will run in a tooltip or secondary label.
 - [ ] Display command output or failure when a quick action runs.
 - [ ] Add confirmation for destructive actions such as discarding changes, hard reset, branch deletion, and stash drop.
@@ -219,8 +219,8 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Test that theme switching preserves terminal output, history, input, and prompt state.
 - [ ] Test multi-character paste and quoted command paste in xterm.
 - [ ] Test quick actions while the terminal is focused.
-- [ ] Test per-file Unstage with multiple staged files.
-- [ ] Test `git rm` and `git rm --cached` independently from shell `rm`.
+- [x] Test per-file Unstage with multiple staged files.
+- [x] Test `git rm` and `git rm --cached` independently from shell `rm`.
 - [ ] Test Playground and Explainer state isolation.
 - [ ] Test switching modes during scenario playback.
 - [ ] Test overlapping Explainer preset clicks and command serialization.
@@ -234,8 +234,8 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Test that revert preserves unrelated later changes.
 - [ ] Test soft, mixed, and hard reset index, working-tree, branch, and HEAD semantics.
 - [ ] Test stash restoration of staged, unstaged, deleted, and untracked files.
-- [ ] Test status codes for staged added, modified, and deleted files.
-- [ ] Test combined flags, option termination, unmatched quotes, and filenames containing spaces.
+- [x] Test status codes for staged added, modified, and deleted files.
+- [x] Test combined flags, option termination, unmatched quotes, and filenames containing spaces.
 - [ ] Test keyboard navigation and focus restoration for dialogs, tabs, graph nodes, and scenario controls.
 - [ ] Add visual regression screenshots for the main desktop workspace, terminal, Explainer, scenarios, inspector, empty state, dark theme, and light theme.
 - [ ] Add browser tests for long histories, graph resizing, manual viewport preservation, and Follow HEAD.
