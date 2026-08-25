@@ -14,7 +14,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Correct cherry-pick so it applies the selected commit's changes and produces the expected working tree and index.
 - [x] Correct rebase so it reapplies each commit's tree changes instead of only recreating commit messages.
 - [x] Correct revert so it applies an inverse patch to the current tree without replacing unrelated later changes.
-- [ ] Verify and correct soft, mixed, and hard reset behavior, including index contents, working tree contents, and whether HEAD stays attached to the current branch.
+- [x] Verify and correct soft, mixed, and hard reset behavior, including index contents, working tree contents, and whether HEAD stays attached to the current branch.
 - [ ] Make `git branch -d` enforce merged-branch safety while keeping `-D` as the force-delete path.
 - [x] Return an error when `git restore` targets a missing or untracked path instead of silently succeeding.
 - [ ] Preserve staged, unstaged, deleted, and untracked file contents correctly through stash push and pop.
@@ -232,7 +232,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Test that cherry-pick applies the expected file changes.
 - [x] Test that rebase preserves and reapplies feature file changes.
 - [x] Test that revert preserves unrelated later changes.
-- [ ] Test soft, mixed, and hard reset index, working-tree, branch, and HEAD semantics.
+- [x] Test soft, mixed, and hard reset index, working-tree, branch, and HEAD semantics.
 - [ ] Test stash restoration of staged, unstaged, deleted, and untracked files.
 - [x] Test status codes for staged added, modified, and deleted files.
 - [x] Test combined flags, option termination, unmatched quotes, and filenames containing spaces.

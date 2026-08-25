@@ -701,6 +701,13 @@ export async function executeReset(targetRef: string, mode: 'soft' | 'mixed' | '
   const fs = getFS();
   const pfs = fs.promises;
   const targetOid = await resolveCommitRef(targetRef);
+  const workingFiles = new Map<string, Uint8Array>();
+
+  if (mode === 'mixed') {
+    for (const filepath of await listAllFiles(pfs, REPO_DIR)) {
+      workingFiles.set(filepath, await pfs.readFile(`${REPO_DIR}/${filepath}`));
+    }
+  }
 
   const current = await git.currentBranch({ fs, dir: REPO_DIR });
   if (current) {
@@ -719,7 +726,7 @@ export async function executeReset(targetRef: string, mode: 'soft' | 'mixed' | '
     await git.checkout({
       fs,
       dir: REPO_DIR,
-      ref: targetOid,
+      ref: current || targetOid,
       force: true,
     });
     return `HEAD is now at ${targetOid.slice(0, 7)}`;
@@ -727,9 +734,23 @@ export async function executeReset(targetRef: string, mode: 'soft' | 'mixed' | '
     await git.checkout({
       fs,
       dir: REPO_DIR,
-      ref: targetOid,
-      noCheckout: true,
+      ref: current || targetOid,
+      force: true,
     });
+
+    const checkedOutFiles = await listAllFiles(pfs, REPO_DIR);
+    for (const filepath of checkedOutFiles) {
+      if (!workingFiles.has(filepath)) {
+        await pfs.unlink(`${REPO_DIR}/${filepath}`);
+      }
+    }
+    for (const [filepath, content] of workingFiles) {
+      const parentDir = filepath.includes('/')
+        ? `${REPO_DIR}/${filepath.slice(0, filepath.lastIndexOf('/'))}`
+        : REPO_DIR;
+      await ensureDir(pfs, parentDir);
+      await pfs.writeFile(`${REPO_DIR}/${filepath}`, content);
+    }
     return `Unstaged changes after reset:`;
   } else {
     return `HEAD is now at ${targetOid.slice(0, 7)} (soft reset)`;
