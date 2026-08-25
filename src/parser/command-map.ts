@@ -2,9 +2,14 @@ import { parseCommand } from './command-parser';
 import { findClosestGitCommand } from './suggestions';
 import { formatStatusOutput, formatLogOutput, formatHelpText, formatCommandHelpText } from './output-formatter';
 import { gitBridge } from '../engine/git-bridge';
+import { repositoryOperationQueue } from '../engine/operation-queue';
 import { CommandResult } from '../model/types';
 
-export async function executeCommandLine(rawInput: string): Promise<CommandResult> {
+export function executeCommandLine(rawInput: string): Promise<CommandResult> {
+  return repositoryOperationQueue.run(() => executeCommandLineNow(rawInput));
+}
+
+export async function executeCommandLineNow(rawInput: string): Promise<CommandResult> {
   const parsed = parseCommand(rawInput);
   let state = gitBridge.getState();
 

@@ -4,8 +4,8 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## Delivery batches
 
-- [ ] Batch 1, command correctness: serialize repository mutations, enforce safe branch deletion, and make stash state and stash references accurate.
-- [ ] Batch 2, playback and replay state: cancel playback during mode changes and Reset, prevent shared-history races, and keep Step Back explanations synchronized.
+- [x] Batch 1, command correctness: serialize repository mutations, enforce safe branch deletion, and make stash state and stash references accurate.
+- [x] Batch 2, playback and replay state: cancel playback during mode changes and Reset, prevent shared-history races, and keep Step Back explanations synchronized.
 - [ ] Batch 3, terminal and destructive-action safety: validate multiline and quoted paste, then add clear confirmation patterns for destructive operations.
 - [ ] Batch 4, accessibility and reliability: complete tab semantics, focus management, ARIA, keyboard navigation, contrast, clipboard errors, and share errors.
 - [ ] Batch 5, graph and workspace polish: refit after real container resizes, improve long-message inspection, and add persistent resizable panes.
@@ -18,8 +18,8 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Keep help output explicit about which commands and options CommitFlow simulates.
 - [x] Isolate Explainer repositories from Playground state so running an explanation never resets or changes the active playground.
 - [x] Preserve the Playground repository, command history, selected scenario, and current step when entering and leaving Explainer mode.
-- [ ] Stop and cancel scenario playback when changing modes, resetting the repository, or loading shared history.
-- [ ] Add a serialized command queue so terminal commands, quick actions, scenarios, Explainer runs, URL replay, and Reset cannot mutate the engine concurrently.
+- [x] Stop and cancel scenario playback when changing modes, resetting the repository, or loading shared history.
+- [x] Add a serialized command queue so terminal commands, quick actions, scenarios, Explainer runs, URL replay, and Reset cannot mutate the engine concurrently.
 - [x] Prevent Explainer preset buttons from starting overlapping simulations while another simulation is running.
 - [x] Distinguish shell `rm` from `git rm` in the parsed command model.
 - [x] Route `git rm` and `git rm --cached` to the Git engine instead of the filesystem-only delete handler.
@@ -181,7 +181,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Preserve commit IDs when moving backward and forward through already-executed scenario steps.
 - [x] Explain when Git intentionally creates new commit IDs during commit, amend, revert, cherry-pick, and rebase.
 - [x] Keep graph nodes stable and avoid automatic refitting after every scenario action.
-- [ ] Keep explanation state synchronized when stepping backward.
+- [x] Keep explanation state synchronized when stepping backward.
 - [x] Add a completion summary with learned objectives and concepts alongside the final graph.
 - [x] Let learners inspect command output, repository state, refs, HEAD, and resulting commit metadata while progressing.
 - [x] Add a compact lesson map that previews every block and supports direct review of its teaching details.
@@ -208,7 +208,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Ensure the shared URL represents the repository currently visible to the user.
 - [ ] Add a version field to shared-history payloads for future compatibility.
 - [ ] Show replay progress while loading a shared URL.
-- [ ] Lock or queue new commands until shared-history replay completes.
+- [x] Lock or queue new commands until shared-history replay completes.
 - [ ] Prevent Reset from racing with active commands or replay.
 - [ ] Confirm Reset when meaningful work will be discarded.
 - [ ] Use a consistent toast system for copy, export, reset, staging, branch switching, and failures.

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RepoState, CommitInfo, Scenario, CommandResult } from './model/types';
 import { gitBridge } from './engine/git-bridge';
-import { executeCommandLine } from './parser/command-map';
+import { repositoryOperationQueue } from './engine/operation-queue';
+import { executeCommandLineNow } from './parser/command-map';
 import { encodeCommandHistoryToHash, decodeCommandHistoryFromHash } from './share/url-codec';
 import { ThemeMode, THEMES } from './theme/theme';
 
@@ -44,6 +45,7 @@ export function App() {
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(2000);
   const [lastScenarioResult, setLastScenarioResult] = useState<CommandResult | null>(null);
   const isPlayingRef = useRef<boolean>(false);
+  const playbackGeneration = useRef(0);
 
   // Apply theme variables to root element
   useEffect(() => {
@@ -76,11 +78,11 @@ export function App() {
     setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  const handleExecuteCommand = useCallback(async (command: string): Promise<CommandResult> => {
+  const executeAndRecordNow = useCallback(async (command: string): Promise<CommandResult> => {
     activeCommandCount.current += 1;
     setIsCommandRunning(true);
     try {
-      const res = await executeCommandLine(command);
+      const res = await executeCommandLineNow(command);
       setCommandHistory((prev) => [...prev, command]);
       if (res.explanation) {
         setLastCommand({ command, explanation: res.explanation });
@@ -94,7 +96,14 @@ export function App() {
     }
   }, []);
 
+  const handleExecuteCommand = useCallback(
+    (command: string): Promise<CommandResult> =>
+      repositoryOperationQueue.run(() => executeAndRecordNow(command)),
+    [executeAndRecordNow],
+  );
+
   const handleModeChange = useCallback((nextMode: 'playground' | 'explainer') => {
+    playbackGeneration.current += 1;
     setIsPlaying(false);
     isPlayingRef.current = false;
     setSelectedCommit(null);
@@ -114,15 +123,18 @@ export function App() {
   }, []);
 
   const handleResetRepo = useCallback(async () => {
-    await gitBridge.send('RESET_REPO');
-    await gitBridge.send('SET_COMMIT_TIME', { timestamp: undefined });
+    playbackGeneration.current += 1;
+    setIsPlaying(false);
+    isPlayingRef.current = false;
+    await repositoryOperationQueue.run(async () => {
+      await gitBridge.send('RESET_REPO');
+      await gitBridge.send('SET_COMMIT_TIME', { timestamp: undefined });
+    });
     setCommandHistory([]);
     setLastCommand(null);
     setSelectedScenario(null);
     setScenarioStepIndex(0);
     setLastScenarioResult(null);
-    setIsPlaying(false);
-    isPlayingRef.current = false;
     setTerminalResetKey((value) => value + 1);
     setExternalTerminalCommand(null);
     window.location.hash = '';
@@ -143,31 +155,42 @@ export function App() {
   const handleScenarioStepForward = useCallback(async () => {
     if (!selectedScenario || scenarioStepIndex >= selectedScenario.steps.length) return;
     const step = selectedScenario.steps[scenarioStepIndex];
-    await setScenarioClock(scenarioStepIndex);
-    const result = await handleExternalCommand(step.command);
+    const result = await repositoryOperationQueue.run(async () => {
+      await setScenarioClock(scenarioStepIndex);
+      const commandResult = await executeAndRecordNow(step.command);
+      externalCommandId.current += 1;
+      setExternalTerminalCommand({ id: externalCommandId.current, command: step.command, result: commandResult });
+      return commandResult;
+    });
     setLastScenarioResult(result);
     if (result.exitCode === 0) {
       setScenarioStepIndex((prev) => prev + 1);
     }
-  }, [handleExternalCommand, scenarioStepIndex, selectedScenario, setScenarioClock]);
+  }, [executeAndRecordNow, scenarioStepIndex, selectedScenario, setScenarioClock]);
 
   // Step back in scenario
   const handleScenarioStepBack = useCallback(async () => {
     if (!selectedScenario || scenarioStepIndex <= 0) return;
     const targetSteps = scenarioStepIndex - 1;
-    await gitBridge.send('RESET_REPO');
-    setCommandHistory([]);
-
-    let replayResult: CommandResult | null = null;
-    for (let i = 0; i < targetSteps; i++) {
-      const step = selectedScenario.steps[i];
-      await setScenarioClock(i);
-      replayResult = await executeCommandLine(step.command);
-      if (replayResult.exitCode !== 0) break;
-      setCommandHistory((prev) => [...prev, step.command]);
-    }
+    playbackGeneration.current += 1;
+    const { replayResult, completedSteps, replayedCommands } = await repositoryOperationQueue.run(async () => {
+      await gitBridge.send('RESET_REPO');
+      const replayedCommands: string[] = [];
+      let replayResult: CommandResult | null = null;
+      let completedSteps = 0;
+      for (let i = 0; i < targetSteps; i++) {
+        const step = selectedScenario.steps[i];
+        await setScenarioClock(i);
+        replayResult = await executeCommandLineNow(step.command);
+        if (replayResult.exitCode !== 0) break;
+        replayedCommands.push(step.command);
+        completedSteps += 1;
+      }
+      return { replayResult, completedSteps, replayedCommands };
+    });
+    setCommandHistory(replayedCommands);
     setLastScenarioResult(replayResult);
-    setScenarioStepIndex(targetSteps);
+    setScenarioStepIndex(completedSteps);
   }, [scenarioStepIndex, selectedScenario, setScenarioClock]);
 
   // Play / Pause automated sequence
@@ -187,9 +210,16 @@ export function App() {
       if (scenarioStepIndex < selectedScenario.steps.length) {
         timer = setTimeout(async () => {
           if (!isPlayingRef.current) return;
+          const generation = playbackGeneration.current;
           const step = selectedScenario.steps[scenarioStepIndex];
-          await setScenarioClock(scenarioStepIndex);
-          const result = await handleExternalCommand(step.command);
+          const result = await repositoryOperationQueue.run(async () => {
+            await setScenarioClock(scenarioStepIndex);
+            const commandResult = await executeAndRecordNow(step.command);
+            externalCommandId.current += 1;
+            setExternalTerminalCommand({ id: externalCommandId.current, command: step.command, result: commandResult });
+            return commandResult;
+          });
+          if (!isPlayingRef.current || generation !== playbackGeneration.current) return;
           setLastScenarioResult(result);
           if (result.exitCode === 0) {
             setScenarioStepIndex((prev) => prev + 1);
@@ -204,7 +234,7 @@ export function App() {
       }
     }
     return () => clearTimeout(timer);
-  }, [isPlaying, scenarioStepIndex, selectedScenario, playbackSpeed, handleExternalCommand, setScenarioClock]);
+  }, [isPlaying, scenarioStepIndex, selectedScenario, playbackSpeed, executeAndRecordNow, setScenarioClock]);
 
   // Load from URL Hash replay on mount
   useEffect(() => {
@@ -213,10 +243,16 @@ export function App() {
       const commands = decodeCommandHistoryFromHash(hash);
       if (commands.length > 0) {
         (async () => {
-          for (const cmd of commands) {
-            await executeCommandLine(cmd);
-            setCommandHistory((prev) => [...prev, cmd]);
-          }
+          playbackGeneration.current += 1;
+          await repositoryOperationQueue.run(async () => {
+            const replayedCommands: string[] = [];
+            for (const cmd of commands) {
+              const result = await executeCommandLineNow(cmd);
+              if (result.exitCode !== 0) break;
+              replayedCommands.push(cmd);
+            }
+            setCommandHistory(replayedCommands);
+          });
         })();
       }
     }

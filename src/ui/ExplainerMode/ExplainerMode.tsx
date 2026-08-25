@@ -3,7 +3,8 @@ import { AlertTriangle, ArrowRight, BookOpen, Columns2, Link2, Maximize2, Play }
 import { Viewport } from '@xyflow/react';
 import { CommitInfo, CommandResult, RepoState } from '../../model/types';
 import { gitBridge } from '../../engine/git-bridge';
-import { executeCommandLine } from '../../parser/command-map';
+import { repositoryOperationQueue } from '../../engine/operation-queue';
+import { executeCommandLineNow } from '../../parser/command-map';
 import { CommitGraph } from '../../graph/CommitGraph';
 import { CommitInspector } from '../CommitInspector/CommitInspector';
 import { CommandCatalog } from './CommandCatalog';
@@ -55,7 +56,7 @@ export function ExplainerMode({ isDark = true, onProcessingChange }: ExplainerMo
 
   const setupBaseRepo = useCallback(async (command: string) => {
     for (const setupCommand of getExplainerSetup(command)) {
-      const setupResult = await executeCommandLine(setupCommand);
+      const setupResult = await executeCommandLineNow(setupCommand);
       if (setupResult.exitCode !== 0) throw new Error(stripAnsi(setupResult.stderr || `Setup failed: ${setupCommand}`));
     }
     return gitBridge.getState();
@@ -70,11 +71,13 @@ export function ExplainerMode({ isDark = true, onProcessingChange }: ExplainerMo
     setError('');
     setSelectedCommit(null);
     try {
-      const simulation = await gitBridge.runIsolated(async () => {
-        const base = await setupBaseRepo(command);
-        const commandResult = await executeCommandLine(command);
-        return { before: cloneState(base), after: cloneState(commandResult.state), result: commandResult };
-      });
+      const simulation = await repositoryOperationQueue.run(() =>
+        gitBridge.runIsolated(async () => {
+          const base = await setupBaseRepo(command);
+          const commandResult = await executeCommandLineNow(command);
+          return { before: cloneState(base), after: cloneState(commandResult.state), result: commandResult };
+        }),
+      );
       if (requestId !== requestIdRef.current) return;
       setBeforeState(simulation.before);
       setAfterState(simulation.after);
