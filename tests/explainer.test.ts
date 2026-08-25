@@ -51,22 +51,44 @@ describe('Explainer simulations', () => {
 
       expect(simulation.result.exitCode).toBe(0);
 
-      if (preset.command.startsWith('git commit')) {
+      if (preset.id === 'commit') {
         expect(simulation.result.state.commits.length).toBe(simulation.before.commits.length + 1);
       }
-      if (preset.command.startsWith('git merge')) {
+      if (preset.id === 'amend') {
+        expect(simulation.result.state.commits.length).toBe(simulation.before.commits.length);
+        expect(simulation.result.state.head.oid).not.toBe(simulation.before.head.oid);
+      }
+      if (preset.id === 'merge') {
         expect(simulation.result.state.commits.at(-1)?.parentOids).toHaveLength(2);
       }
-      if (preset.command.startsWith('git reset --soft')) {
+      if (preset.id === 'reset-soft') {
         expect(simulation.result.state.commits.length).toBe(simulation.before.commits.length - 1);
         expect(simulation.result.state.stagedFiles.length).toBeGreaterThan(0);
       }
-      if (preset.command.startsWith('git revert')) {
+      if (preset.id === 'revert') {
         expect(simulation.result.state.commits.length).toBe(simulation.before.commits.length + 1);
       }
-      if (preset.command.startsWith('git tag')) {
+      if (preset.id === 'tag-create') {
         expect(simulation.result.state.tags.map((tag) => tag.name)).toContain('v1.0.0');
+      }
+      if (preset.id === 'tag-delete') {
+        expect(simulation.before.tags.map((tag) => tag.name)).toContain('v1.0.0');
+        expect(simulation.result.state.tags.map((tag) => tag.name)).not.toContain('v1.0.0');
       }
     });
   }
+
+  it('provides complete teaching metadata for a broad command library', () => {
+    expect(EXPLAINER_PRESETS.length).toBeGreaterThanOrEqual(25);
+    expect(new Set(EXPLAINER_PRESETS.map((preset) => preset.command)).size).toBe(EXPLAINER_PRESETS.length);
+    for (const preset of EXPLAINER_PRESETS) {
+      expect(preset.title).toBeTruthy();
+      expect(preset.summary.length).toBeGreaterThan(24);
+      expect(preset.whenToUse.length).toBeGreaterThan(24);
+      expect(preset.caution.length).toBeGreaterThan(24);
+      expect(preset.reads.length).toBeGreaterThan(0);
+      expect(preset.changes.length).toBeGreaterThan(0);
+      expect(preset.concepts.length).toBeGreaterThanOrEqual(3);
+    }
+  });
 });

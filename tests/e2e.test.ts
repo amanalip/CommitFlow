@@ -133,6 +133,25 @@ describe('Browser End-to-End Test', () => {
     expect(await page.getByRole('alert').count()).toBe(0);
     expect(await page.getByRole('button', { name: /Reset/ }).count()).toBe(0);
     expect(await page.getByRole('button', { name: /Share/ }).count()).toBe(0);
+    expect(await page.getByText('27 guided examples').first().isVisible()).toBe(true);
+    expect(await page.getByRole('region', { name: 'Before and after state comparison' }).isVisible()).toBe(true);
+    expect(await page.getByText('2 repository effects').isVisible()).toBe(true);
+    expect(await page.getByText('Command anatomy').isVisible()).toBe(true);
+
+    const explainerCommit = page.locator('#commitflow-before-graph').getByRole('button', { name: /Inspect commit/ }).first();
+    await explainerCommit.focus();
+    await page.keyboard.press('Enter');
+    expect(await page.getByRole('dialog', { name: /Commit Inspector/ }).isVisible()).toBe(true);
+    await page.keyboard.press('Escape');
+
+    const selectedExplainerCommand = page.getByRole('textbox', { name: 'Command to simulate' });
+    await page.getByTitle('Switch to dark mode').click();
+    expect(await selectedExplainerCommand.inputValue()).toBe('git checkout -b feature/auth');
+
+    await page.getByPlaceholder('Search command or concept').fill('initialize');
+    await page.getByRole('button', { name: /Initialize a repository/ }).click();
+    await page.getByText('No repository exists yet').waitFor({ state: 'visible' });
+    expect(await page.getByText('Repository ready, with no commits yet').isVisible()).toBe(true);
 
     const playgroundBtn = page.getByRole('button', { name: 'Playground' });
     await page.waitForFunction(() => {
@@ -156,5 +175,5 @@ describe('Browser End-to-End Test', () => {
 
     await browser.close();
     await server.close();
-  }, 30000);
+  }, 60000);
 });

@@ -53,11 +53,33 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Give reset presets enough history and staged state to demonstrate soft, mixed, and hard differences.
 - [x] Give revert a non-root commit whose inverse change can be shown safely.
 - [x] Display command errors as errors instead of presenting them as successful explanations.
-- [ ] Show file, branch, HEAD, staging, and working-tree differences in addition to commit-count differences.
-- [ ] Highlight exactly what changed between Before and After.
+- [x] Show file, branch, HEAD, staging, and working-tree differences in addition to commit-count differences.
+- [x] Highlight exactly what changed between Before and After.
 - [x] Use unique graph identifiers or element refs for every comparison graph.
 - [x] Ensure exporting the After graph never exports the Before graph.
 - [x] Disable or redefine header Reset and Share actions in Explainer mode so they operate on the visible content.
+- [x] Expand the Explainer from seven examples to 27 searchable commands covering setup, inspection, staging, commits, branches, history editing, recovery, stashes, and tags.
+- [x] Give every Explainer example a purpose-built repository fixture that makes its effect visible and valid.
+- [x] Test every added Explainer example and fail the suite if its setup or command fails.
+
+## P1: Explainer learning experience
+
+- [x] Replace the row of raw command chips with a searchable, categorized command catalog.
+- [x] Show each example's title, difficulty, purpose, when-to-use guidance, caution, and related concepts before it runs.
+- [x] Break the selected command into readable command, option, revision, branch, and path tokens.
+- [x] Explain what Git reads, what Git changes, whether HEAD moves, and whether a commit is created.
+- [x] Show the exact command output in a dedicated result panel.
+- [x] Compare HEAD, current branch, commits, branches, tags, stashes, staged files, unstaged files, and untracked files before and after.
+- [x] Highlight only changed comparison rows and clearly label unchanged values.
+- [x] List created and removed commits, added and removed refs, and file-state transitions.
+- [x] Let learners inspect commits from both the Before and After graphs.
+- [x] Add clear reading guidance above the graphs so beginners know what to compare.
+- [x] Add focus controls that expand either Before or After without losing the comparison.
+- [x] Add a synchronized-view option so panning and zooming one comparison graph is mirrored in the other.
+- [x] Provide useful empty states for commands such as `git init`, `git status`, and `git diff` where the commit graph may not change.
+- [x] Distinguish commands that inspect state from commands that mutate state.
+- [x] Keep the current explanation and command catalog selection intact while switching themes.
+- [x] Make Explainer errors teach the prerequisite or suggest a guided example instead of showing only the engine error.
 
 ## P1: Terminal visual treatment
 
@@ -127,6 +149,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Replace the basic scenario select with a searchable, themed scenario browser.
 - [x] Show category, difficulty, summary, estimated time, step count, and progress for each scenario.
 - [x] Expand the curriculum to 28 focused lessons spanning repository basics, inspection, staging, branches, merges, rebase, recovery, tags, and selective integration.
+- [ ] Expand the main curriculum to 42 high-quality lessons with unique goals, fixtures, commands, and beginner explanations.
 - [x] Give every scenario learning objectives, prerequisites, and key concepts.
 - [x] Give every lesson 15 to 20 meaningful blocks with inspection before mutation and verification afterward.
 - [x] Display the current or previewed command prominently during playback.

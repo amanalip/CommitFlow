@@ -10,6 +10,7 @@ import {
   useViewport,
   ReactFlowProvider,
   BackgroundVariant,
+  Viewport,
 } from '@xyflow/react';
 import { Crosshair, Download, FileCode, Image, Lock, Map, Maximize, Minus, Plus, Unlock } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
@@ -34,6 +35,10 @@ interface CommitGraphProps {
   onSelectCommit?: (commit: CommitInfo) => void;
   isDark?: boolean;
   graphId?: string;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  viewport?: Viewport;
+  onViewportChange?: (viewport: Viewport) => void;
 }
 
 function InnerCommitGraph({
@@ -41,6 +46,10 @@ function InnerCommitGraph({
   onSelectCommit,
   isDark = true,
   graphId = 'commitflow-graph-container',
+  emptyTitle = 'Your commit history will appear here',
+  emptyDescription = 'Start with git init, create a file, stage it, and commit it.',
+  viewport,
+  onViewportChange,
 }: CommitGraphProps) {
   const { fitView, zoomIn, zoomOut } = useReactFlow();
   const { zoom } = useViewport();
@@ -104,10 +113,8 @@ function InnerCommitGraph({
       {commits.length === 0 && (
         <div className={styles.emptyOverlay} data-export-exclude="true">
           <div className={styles.emptyIcon}>⎇</div>
-          <div className={styles.emptyTitle}>Your commit history will appear here</div>
-          <div className={styles.emptyDescription}>
-            Start with <code>git init</code>, create a file, stage it, and commit it.
-          </div>
+          <div className={styles.emptyTitle}>{emptyTitle}</div>
+          <div className={styles.emptyDescription}>{emptyDescription}</div>
         </div>
       )}
 
@@ -133,6 +140,8 @@ function InnerCommitGraph({
         onMoveStart={(event) => {
           if (event) setFollowHead(false);
         }}
+        viewport={viewport}
+        onViewportChange={onViewportChange}
         proOptions={{ hideAttribution: true }}
       >
         <Panel position="top-right" className={styles.graphPanel}>
@@ -141,6 +150,7 @@ function InnerCommitGraph({
               type="button"
               className={styles.controlButton}
               onClick={() => fitView({ padding: 0.25, duration: 400, maxZoom: 1 })}
+              disabled={commits.length === 0}
               aria-label="Fit graph to view"
               title="Fit graph to view"
             >
@@ -152,6 +162,7 @@ function InnerCommitGraph({
               type="button"
               className={`${styles.controlButton} ${followHead ? styles.activeButton : ''}`}
               onClick={handleFollowHead}
+              disabled={commits.length === 0}
               aria-pressed={followHead}
               title="Keep the newest commit in view"
             >
@@ -162,6 +173,7 @@ function InnerCommitGraph({
               type="button"
               className={`${styles.iconButton} ${!interactive ? styles.activeButton : ''}`}
               onClick={() => setInteractive((value) => !value)}
+              disabled={commits.length === 0}
               aria-label={interactive ? 'Lock graph interaction' : 'Unlock graph interaction'}
               title={interactive ? 'Lock graph interaction' : 'Unlock graph interaction'}
             >
@@ -189,6 +201,7 @@ function InnerCommitGraph({
               type="button"
               className={`${styles.controlButton} ${showMinimap ? styles.activeButton : ''}`}
               onClick={() => setShowMinimap((prev) => !prev)}
+              disabled={commits.length === 0}
               aria-pressed={showMinimap}
               title="Toggle minimap"
             >
