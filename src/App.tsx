@@ -248,6 +248,21 @@ export function App() {
           onClose={() => setShowExplanation(false)}
         />
       )}
+
+      <footer className={styles.appFooter}>
+        <span>
+          Copyright © 2026{' '}
+          <a
+            href="https://github.com/amanalip"
+            target="_blank"
+            rel="noreferrer"
+            className={styles.footerLink}
+          >
+            Aman Ali Pogaku
+          </a>
+          . Released under GPL v3.
+        </span>
+      </footer>
     </div>
   );
 }

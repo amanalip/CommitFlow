@@ -60,8 +60,12 @@ describe('Browser End-to-End Test', () => {
     await explainerBtn.click();
     await page.waitForTimeout(1000);
 
-    const explainerTitle = page.locator('text=Git Command Explainer');
-    expect(await explainerTitle.isVisible()).toBe(true);
+    // Verify footer and github link
+    const footerText = await page.locator('footer').innerText();
+    expect(footerText).toContain('Aman Ali Pogaku');
+
+    const githubLink = page.locator('header a[href="https://github.com/amanalip/CommitFlow"]');
+    expect(await githubLink.isVisible()).toBe(true);
 
     expect(pageErrors.length).toBe(0);
 
