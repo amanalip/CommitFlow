@@ -302,7 +302,7 @@ export async function snapshotRepoState(): Promise<RepoState> {
     stagedFiles,
     unstagedFiles,
     untrackedFiles,
-    stashes: stashList.map((s, idx) => `stash@{${idx}}: ${s.message}`),
+    stashes: stashList.map((s, idx) => ({ index: idx, message: s.message, oid: String(s.id) })),
   };
 }
 
@@ -379,7 +379,6 @@ export async function executeCommit(
   amend = false
 ): Promise<{ sha: string; output: string }> {
   const fs = getFS();
-  const pfs = fs.promises;
 
   let parent: string[] | undefined = undefined;
   if (amend) {
