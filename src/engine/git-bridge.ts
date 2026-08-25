@@ -110,7 +110,7 @@ class GitBridge {
           output = await workerEngine.executeDiff(payload?.staged);
           break;
         case 'STASH':
-          output = await workerEngine.executeStash(payload.subcommand, payload.message);
+          output = await workerEngine.executeStash(payload.subcommand, payload.message, payload.reference);
           break;
         case 'WRITE_FILE':
           output = await workerEngine.executeWriteFile(payload.path, payload.content, payload.append);

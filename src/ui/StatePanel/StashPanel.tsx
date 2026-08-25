@@ -31,8 +31,9 @@ export function StashPanel({ repoState, onAction }: StashPanelProps) {
               <button
                 type="button"
                 className={styles.quickActionBtn}
-                onClick={() => onAction('git stash pop')}
-                title="Apply and drop top stash"
+                onClick={() => onAction(`git stash pop stash@{${stash.index}}`)}
+                title={`Apply and remove stash@{${stash.index}}`}
+                aria-label={`Pop stash ${stash.index}: ${stash.message}`}
               >
                 Pop
               </button>

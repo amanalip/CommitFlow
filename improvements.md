@@ -27,10 +27,10 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Correct rebase so it reapplies each commit's tree changes instead of only recreating commit messages.
 - [x] Correct revert so it applies an inverse patch to the current tree without replacing unrelated later changes.
 - [x] Verify and correct soft, mixed, and hard reset behavior, including index contents, working tree contents, and whether HEAD stays attached to the current branch.
-- [ ] Make `git branch -d` enforce merged-branch safety while keeping `-D` as the force-delete path.
+- [x] Make `git branch -d` enforce merged-branch safety while keeping `-D` as the force-delete path.
 - [x] Return an error when `git restore` targets a missing or untracked path instead of silently succeeding.
-- [ ] Preserve staged, unstaged, deleted, and untracked file contents correctly through stash push and pop.
-- [ ] Support selecting a specific stash or only show Pop on the top stash so every row does not pop `stash@{0}`.
+- [x] Preserve staged, unstaged, deleted, and untracked file contents correctly through stash push and pop.
+- [x] Support selecting a specific stash or only show Pop on the top stash so every row does not pop `stash@{0}`.
 - [x] Fix short status output to report `A`, `M`, and `D` accurately for staged files.
 - [x] Represent a file with staged and unstaged edits in both state lists, diffs, and subsequent commit behavior.
 - [x] Remove the duplicate `Date:` line from standard `git log` output.
@@ -295,7 +295,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Test that rebase preserves and reapplies feature file changes.
 - [x] Test that revert preserves unrelated later changes.
 - [x] Test soft, mixed, and hard reset index, working-tree, branch, and HEAD semantics.
-- [ ] Test stash restoration of staged, unstaged, deleted, and untracked files.
+- [x] Test stash restoration of staged, unstaged, deleted, and untracked files.
 - [x] Test status codes for staged added, modified, and deleted files.
 - [x] Test simultaneous staged and unstaged edits to the same file, including both diffs and commit behavior.
 - [x] Test combined flags, option termination, unmatched quotes, and filenames containing spaces.

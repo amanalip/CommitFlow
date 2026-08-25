@@ -266,7 +266,8 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
   if (parsed.type === 'stash') {
     const sub = parsed.args[0] || (parsed.flags['pop'] ? 'pop' : parsed.flags['list'] ? 'list' : 'push');
     const msg = parsed.args.slice(1).join(' ') || (typeof parsed.flags['m'] === 'string' ? parsed.flags['m'] : 'WIP');
-    const res = await gitBridge.send('STASH', { subcommand: sub, message: msg });
+    const reference = parsed.args.find((arg) => /^stash@\{\d+\}$/.test(arg));
+    const res = await gitBridge.send('STASH', { subcommand: sub, message: msg, reference });
     return {
       rawCommand: rawInput,
       stdout: res.output || '',

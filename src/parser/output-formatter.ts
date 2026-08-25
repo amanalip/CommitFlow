@@ -139,7 +139,7 @@ const COMMAND_HELP: Record<string, CommandHelpEntry> = {
   tag: { usage: 'git tag [-d] [name] [commit]', summary: 'List, create, or delete lightweight tags.', examples: ['git tag v1.0.0', 'git tag -d v1.0.0'] },
   reset: { usage: 'git reset [--soft|--mixed|--hard] <commit>', summary: 'Move HEAD and optionally reset the index and working tree.', examples: ['git reset --soft HEAD~1', 'git reset --mixed HEAD~1', 'git reset --hard HEAD~1'], note: '--hard discards tracked working-tree changes.' },
   revert: { usage: 'git revert <commit>', summary: 'Create a new commit that reverses an earlier commit.', examples: ['git revert HEAD', 'git revert HEAD~2'], note: 'The original commit remains in history and the revert receives a new ID.' },
-  stash: { usage: 'git stash [push|pop|list|clear] [-m <message>]', summary: 'Temporarily store or restore uncommitted work.', examples: ['git stash -m "WIP navigation"', 'git stash list', 'git stash pop'] },
+  stash: { usage: 'git stash [push|pop|list|clear] [stash@{n}] [-m <message>]', summary: 'Temporarily store or restore uncommitted work.', examples: ['git stash -m "WIP navigation"', 'git stash list', 'git stash pop', 'git stash pop stash@{1}'] },
   status: { usage: 'git status [-s|--short]', summary: 'Inspect the branch, staging area, and working tree.', examples: ['git status', 'git status --short'] },
   log: { usage: 'git log [-n N] [--oneline] [--graph]', summary: 'Read commit history from newest to oldest.', examples: ['git log', 'git log --oneline --graph', 'git log -n 3'] },
   diff: { usage: 'git diff [--staged|--cached]', summary: 'Compare working changes or staged changes.', examples: ['git diff', 'git diff --staged'] },

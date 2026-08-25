@@ -28,7 +28,15 @@ let defaultAuthor: {
   email: 'user@commitflow.dev',
 };
 
-let stashList: { id: number; message: string; staged: WorkingFile[]; unstaged: WorkingFile[]; untracked: string[] }[] = [];
+interface StashEntry {
+  id: number;
+  message: string;
+  paths: string[];
+  indexFiles: Record<string, string>;
+  worktreeFiles: Record<string, string>;
+}
+
+let stashList: StashEntry[] = [];
 let previousBranch = '';
 
 export interface GitRuntimeContext {
@@ -574,6 +582,18 @@ export async function executeBranch(args: {
 
   if (args.delete || args.forceDelete) {
     const target = args.delete || args.forceDelete!;
+    if (args.delete) {
+      const targetOid = await git.resolveRef({ fs, dir: REPO_DIR, ref: target });
+      const headOid = await resolveCommitRef('HEAD');
+      const isMerged =
+        targetOid === headOid ||
+        (await git.isDescendent({ fs, dir: REPO_DIR, oid: headOid, ancestor: targetOid, depth: -1 }));
+      if (!isMerged) {
+        throw new Error(
+          `error: The branch '${target}' is not fully merged. If you are sure you want to delete it, run 'git branch -D ${target}'.`,
+        );
+      }
+    }
     await git.deleteBranch({
       fs,
       dir: REPO_DIR,
@@ -985,7 +1005,11 @@ export async function executeDiff(staged = false): Promise<string> {
   return diffLines.length > 0 ? diffLines.join('\n') : '';
 }
 
-export async function executeStash(subcommand = 'push', message = 'WIP on branch'): Promise<string> {
+export async function executeStash(
+  subcommand = 'push',
+  message = 'WIP on branch',
+  reference?: string,
+): Promise<string> {
   const fs = getFS();
   const pfs = fs.promises;
 
@@ -998,19 +1022,45 @@ export async function executeStash(subcommand = 'push', message = 'WIP on branch
     if (stashList.length === 0) {
       throw new Error('No stash entries found.');
     }
-    const popped = stashList.shift()!;
-    for (const f of popped.staged) {
-      if (f.content !== undefined) {
-        await writeTextFile(pfs, `${REPO_DIR}/${f.path}`, f.content);
-        await git.add({ fs, dir: REPO_DIR, filepath: f.path });
+    const match = reference?.match(/^stash@\{(\d+)\}$/);
+    const stashIndex = match ? Number(match[1]) : 0;
+    if (!Number.isInteger(stashIndex) || stashIndex < 0 || stashIndex >= stashList.length) {
+      throw new Error(`fatal: '${reference}' is not a valid stash reference`);
+    }
+
+    const current = await snapshotRepoState();
+    if (current.stagedFiles.length || current.unstagedFiles.length || current.untrackedFiles.length) {
+      throw new Error('Your local changes would be overwritten by stash pop. Commit or stash them first.');
+    }
+
+    const [popped] = stashList.splice(stashIndex, 1);
+    for (const path of popped.paths) {
+      const indexContent = popped.indexFiles[path];
+      if (indexContent !== undefined) {
+        await writeTextFile(pfs, `${REPO_DIR}/${path}`, indexContent);
+        await git.add({ fs, dir: REPO_DIR, filepath: path });
+      } else {
+        try {
+          await git.remove({ fs, dir: REPO_DIR, filepath: path });
+        } catch {
+          // Untracked files have no index entry to remove.
+        }
       }
     }
-    for (const f of popped.unstaged) {
-      if (f.content !== undefined) {
-        await writeTextFile(pfs, `${REPO_DIR}/${f.path}`, f.content);
+
+    for (const path of popped.paths) {
+      const worktreeContent = popped.worktreeFiles[path];
+      if (worktreeContent !== undefined) {
+        await writeTextFile(pfs, `${REPO_DIR}/${path}`, worktreeContent);
+      } else {
+        try {
+          await pfs.unlink(`${REPO_DIR}/${path}`);
+        } catch {
+          // The stashed working tree also omitted this path.
+        }
       }
     }
-    return `Dropped stash@{0} (${popped.message})`;
+    return `Dropped stash@{${stashIndex}} (${popped.message})`;
   }
 
   if (subcommand === 'clear') {
@@ -1018,26 +1068,63 @@ export async function executeStash(subcommand = 'push', message = 'WIP on branch
     return '';
   }
 
-  // Stash push
-  const state = await snapshotRepoState();
-  if (state.stagedFiles.length === 0 && state.unstagedFiles.length === 0 && state.untrackedFiles.length === 0) {
+  const matrix = await git.statusMatrix({ fs, dir: REPO_DIR });
+  const changedRows = matrix.filter(([, head, worktree, stage]) => !(head === 1 && worktree === 1 && stage === 1));
+  if (changedRows.length === 0) {
     return 'No local changes to save';
   }
+
+  const indexEntries = (await git.walk({
+    fs,
+    dir: REPO_DIR,
+    trees: [git.STAGE()],
+    map: async (path, [entry]) => {
+      if (path === '.' || !entry || (await entry.type()) !== 'blob') return undefined;
+      const oid = await entry.oid();
+      const { blob } = await git.readBlob({ fs, dir: REPO_DIR, oid });
+      return { path, content: Buffer.from(blob).toString('utf8') };
+    },
+  })) as Array<{ path: string; content: string } | undefined>;
+
+  const allIndexFiles = Object.fromEntries(
+    indexEntries.filter((entry): entry is { path: string; content: string } => Boolean(entry)).map((entry) => [entry.path, entry.content]),
+  );
+  const paths = changedRows.map(([path]) => path);
+  const indexFiles: Record<string, string> = {};
+  const worktreeFiles: Record<string, string> = {};
+  for (const [path, , worktreeStatus, stageStatus] of changedRows) {
+    if (stageStatus > 0 && allIndexFiles[path] !== undefined) {
+      indexFiles[path] = allIndexFiles[path];
+    }
+    if (worktreeStatus > 0) {
+      worktreeFiles[path] = await readTextFile(pfs, `${REPO_DIR}/${path}`);
+    }
+  }
+
+  const state = await snapshotRepoState();
 
   stashList.unshift({
     id: Date.now(),
     message: `${state.head.target}: ${message}`,
-    staged: [...state.stagedFiles],
-    unstaged: [...state.unstagedFiles],
-    untracked: [...state.untrackedFiles],
+    paths,
+    indexFiles,
+    worktreeFiles,
   });
 
-  // Revert working tree to HEAD
   try {
-    const headOid = await resolveCommitRef('HEAD');
-    await git.checkout({ fs, dir: REPO_DIR, ref: headOid, force: true });
+    await git.checkout({ fs, dir: REPO_DIR, ref: 'HEAD', force: true });
   } catch {
     // Empty repo
+  }
+
+  for (const [path, headStatus] of changedRows) {
+    if (headStatus === 0) {
+      try {
+        await pfs.unlink(`${REPO_DIR}/${path}`);
+      } catch {
+        // The checkout may already have removed it.
+      }
+    }
   }
 
   return `Saved working directory and index state "${message}"`;
