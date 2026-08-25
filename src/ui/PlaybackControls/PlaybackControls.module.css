@@ -1,0 +1,83 @@
+.controlsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--bg-secondary, #1e293b);
+  border-bottom: 1px solid var(--border-color, #334155);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.buttonGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.controlBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--bg-tertiary, #334155);
+  border: 1px solid var(--border-color, #475569);
+  color: var(--text-color, #f8fafc);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.controlBtn:hover:not(:disabled) {
+  background: var(--border-color, #475569);
+  border-color: var(--accent-color, #38bdf8);
+}
+
+.controlBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.primaryBtn {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background: #0369a1;
+}
+
+.stepIndicator {
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.speedSelect {
+  background: var(--bg-tertiary, #334155);
+  border: 1px solid var(--border-color, #475569);
+  color: var(--text-color, #f8fafc);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.scenarioInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scenarioTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color, #f8fafc);
+}
+
+.scenarioDesc {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}

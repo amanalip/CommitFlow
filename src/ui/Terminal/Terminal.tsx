@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
@@ -91,14 +91,12 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
     };
   }, [themeMode, writePrompt]);
 
-  // Update theme colors
   useEffect(() => {
     if (xtermInstance.current) {
       xtermInstance.current.options.theme = THEMES[themeMode].xterm;
     }
   }, [themeMode]);
 
-  // Key event handling
   useEffect(() => {
     const term = xtermInstance.current;
     if (!term) return;
@@ -110,7 +108,6 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
       const printable = !ev.altKey && !ev.ctrlKey && !ev.metaKey;
 
       if (ev.keyCode === 13) {
-        // ENTER key
         const line = currentLine.current.trim();
         term.write('\r\n');
 
@@ -128,7 +125,6 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
           writePrompt();
         }
       } else if (ev.keyCode === 8) {
-        // BACKSPACE key
         if (cursorPosition.current > 0) {
           const before = currentLine.current.slice(0, cursorPosition.current - 1);
           const after = currentLine.current.slice(cursorPosition.current);
@@ -138,18 +134,15 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
           term.write('\b' + after + ' ' + '\b'.repeat(after.length + 1));
         }
       } else if (ev.keyCode === 38) {
-        // UP arrow (history back)
         if (historyIndex.current > 0) {
           historyIndex.current--;
           const histCmd = commandHistory.current[historyIndex.current];
-          // Clear current line
           term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length) + '\r' + getPrompt());
           term.write(histCmd);
           currentLine.current = histCmd;
           cursorPosition.current = histCmd.length;
         }
       } else if (ev.keyCode === 40) {
-        // DOWN arrow (history forward)
         if (historyIndex.current < commandHistory.current.length - 1) {
           historyIndex.current++;
           const histCmd = commandHistory.current[historyIndex.current];
@@ -164,7 +157,6 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
           cursorPosition.current = 0;
         }
       } else if (ev.keyCode === 9) {
-        // TAB key (autocomplete)
         ev.preventDefault();
         const branchNames = repoState.branches.map((b) => b.name);
         const fileNames = [

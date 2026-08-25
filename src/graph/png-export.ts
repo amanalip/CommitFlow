@@ -9,10 +9,6 @@ export async function exportGraphToPng(elementId = 'commitflow-graph-container')
   const dataUrl = await toPng(node, {
     backgroundColor: '#0f172a',
     quality: 0.95,
-    filter: (domNode: HTMLElement) => {
-      // Exclude minimap or controls if desired or keep
-      return true;
-    },
   });
 
   const link = document.createElement('a');

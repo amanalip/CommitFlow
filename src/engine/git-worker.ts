@@ -319,7 +319,7 @@ export async function executeRm(filepaths: string[], cached = false): Promise<st
   return '';
 }
 
-export async function executeCommit(message: string, allowEmpty = false): Promise<{ sha: string; output: string }> {
+export async function executeCommit(message: string, _allowEmpty = false): Promise<{ sha: string; output: string }> {
   const sha = await git.commit({
     fs,
     dir: REPO_DIR,

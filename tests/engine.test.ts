@@ -52,7 +52,6 @@ describe('Git Engine Workflow', () => {
     expect(mergeRes.exitCode).toBe(0);
     expect(mergeRes.state.head.target).toBe('main');
   });
-});
 
   it('handles git tag, reset, revert, cherry-pick, and rebase', async () => {
     await executeCommandLine('git init');
@@ -60,7 +59,7 @@ describe('Git Engine Workflow', () => {
     await executeCommandLine('echo "initial a" > a.txt');
     await executeCommandLine('git add a.txt');
     const c1 = await executeCommandLine('git commit -m "c1"');
-    const c1Sha = c1.state.commits[0].oid;
+    expect(c1.state.commits.length).toBe(1);
 
     // Tag
     const tagRes = await executeCommandLine('git tag v1.0.0');
@@ -92,3 +91,4 @@ describe('Git Engine Workflow', () => {
     const resetRes = await executeCommandLine('git reset --soft HEAD~1');
     expect(resetRes.exitCode).toBe(0);
   });
+});
