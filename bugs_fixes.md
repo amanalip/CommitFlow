@@ -80,22 +80,23 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
 8. **1-Click Stage All Action**: Added "+ Stage All (N)" button when multiple untracked/modified files are present.
 9. **1-Click Unstage Actions**: Added "− Unstage" buttons in the Staging Area panel to unstage files instantly.
 10. **1-Click Unstage All Action**: Added "− Unstage All (N)" button to unstage all staged files with one click.
-11. **1-Click Branch Switch**: Added "Switch" button in the Branches list to switch active branch directly.
-12. **HEAD Pulse Ring**: Added animated pulsing glow to the active HEAD commit node.
-13. **Color-Coded Branch Badges**: Branch badges now match topological lane colors with contrasting backgrounds.
-14. **Terminal Keyboard Navigation**: Added `ArrowLeft`, `ArrowRight`, `Ctrl+A`/`Home`, and `Ctrl+E`/`End` inline cursor navigation.
-15. **Terminal Shortcuts**: Added `Ctrl+L` to clear screen, `Ctrl+C` to cancel prompt, and `Ctrl+U` to erase line.
-16. **Global Modal Shortcuts**: Added global `Escape` key listener to dismiss all active inspector and explanation modals.
-17. **Quick Preset Examples in Explainer Mode**: Added quick-try buttons for popular commands (`git commit`, `git checkout -b`, `git merge`, `git rebase`, `git reset`, `git revert`, `git tag`).
-18. **Scenario Progress Indicator**: Added step counter and description tracker in the playback controls bar.
-19. **Accessible Color Contrast**: Tuned theme tokens for WCAG AA contrast across terminal text, graph nodes, and badges.
-20. **Clean Working Tree Guidance**: Informative empty states for clean working directories, empty staging areas, and fresh repos.
-21. **GitHub Logo & Navigation Link**: Header includes direct link to source repository.
-22. **Author Copyright Footer**: Added footer with author attribution and license notice.
+11. **Dedicated Stash Viewer Tab**: Added a Stashes tab in StatePanel allowing one-click stash inspection and "Pop" application.
+12. **1-Click Branch Switch**: Added "Switch" button in the Branches list to switch active branch directly.
+13. **HEAD Pulse Ring**: Added animated pulsing glow to the active HEAD commit node.
+14. **Color-Coded Branch Badges**: Branch badges now match topological lane colors with contrasting backgrounds.
+15. **Terminal Keyboard Navigation**: Added `ArrowLeft`, `ArrowRight`, `Ctrl+A`/`Home`, and `Ctrl+E`/`End` inline cursor navigation.
+16. **Terminal Shortcuts**: Added `Ctrl+L` to clear screen, `Ctrl+C` to cancel prompt, and `Ctrl+U` to erase line.
+17. **Global Modal Shortcuts**: Added global `Escape` key listener to dismiss all active inspector and explanation modals.
+18. **Quick Preset Examples in Explainer Mode**: Added quick-try buttons for popular commands (`git commit`, `git checkout -b`, `git merge`, `git rebase`, `git reset`, `git revert`, `git tag`).
+19. **Scenario Progress Indicator**: Added step counter and description tracker in the playback controls bar.
+20. **Accessible Color Contrast**: Tuned theme tokens for WCAG AA contrast across terminal text, graph nodes, and badges.
+21. **Clean Working Tree Guidance**: Informative empty states for clean working directories, empty staging areas, and fresh repos.
+22. **GitHub Logo & Navigation Link**: Header includes direct link to source repository.
+23. **Author Copyright Footer**: Added footer with author attribution and license notice.
 
 ---
 
-## 3. Test Suite Enhancements (51 Automated Tests)
+## 3. Test Suite Enhancements (56 Automated Tests Across 10 Suites)
 
 - **Tokenizer and Parser Tests (18 Tests - `tests/parser.test.ts`)**:
   - Quoted strings with special characters and semicolons.
@@ -125,6 +126,13 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
   - Detached HEAD status message.
   - Commit log formatting in oneline and multi-line modes.
   - Help text completeness across git and utility commands.
+- **Virtual Filesystem Tests (3 Tests - `tests/fs.test.ts`)**:
+  - Directory recursion and file writing/reading.
+  - Recursive directory listing excluding `.git`.
+  - Clean filesystem resets.
+- **Scenarios Data Schema Tests (2 Tests - `tests/scenarios_unit.test.ts`)**:
+  - Bundle size validation (>= 7 scenarios).
+  - Schema validity across steps, descriptions, and commands.
 - **Share Codec Tests (4 Tests - `tests/share.test.ts`)**:
   - Compression and decompression integrity.
   - Empty input handling.
@@ -138,7 +146,7 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
 - **Theme & Palette Tests (2 Tests - `tests/theme.test.ts`)**:
   - Token integrity for dark and light themes.
   - Palette contrast and modulo wrapping for topological lanes.
-- **Scenario Tests (7 Tests - `tests/scenarios.test.ts`)**:
+- **Scenario Execution Tests (7 Tests - `tests/scenarios.test.ts`)**:
   - Automated execution of all 7 bundled learning scenarios.
 - **Browser End-to-End Tests (1 Test - `tests/e2e.test.ts`)**:
   - Playwright browser session typing interactive commands, verifying live DOM nodes, mode switching, footer, and repository links.
