@@ -117,11 +117,58 @@ export function formatLogOutput(commits: CommitInfo[], oneline = false, graph = 
     .join('\n');
 }
 
+interface CommandHelpEntry {
+  usage: string;
+  summary: string;
+  examples: string[];
+  note?: string;
+}
+
+const COMMAND_HELP: Record<string, CommandHelpEntry> = {
+  init: { usage: 'git init [-b <branch>]', summary: 'Initialize an empty repository.', examples: ['git init', 'git init -b trunk'] },
+  add: { usage: 'git add <file... | .>', summary: 'Copy working-tree changes into the staging area.', examples: ['git add README.md', 'git add .'] },
+  rm: { usage: 'git rm [--cached] <file...>', summary: 'Remove tracked files, or remove them only from the index.', examples: ['git rm old.txt', 'git rm --cached local.env'] },
+  commit: { usage: 'git commit [-a] [-m <message>] [--amend]', summary: 'Record the staged snapshot as a commit.', examples: ['git commit -m "feat: add search"', 'git commit -am "fix: update tracked files"', 'git commit --amend -m "docs: correct title"'] },
+  branch: { usage: 'git branch [-d|-D|-m] [name]', summary: 'List, create, delete, or rename local branches.', examples: ['git branch feature/auth', 'git branch -m feature/login', 'git branch -d feature/auth'] },
+  checkout: { usage: 'git checkout [-b] <branch|commit>', summary: 'Switch branches or inspect a commit in detached HEAD state.', examples: ['git checkout main', 'git checkout -b feature/ui', 'git checkout HEAD~1'] },
+  switch: { usage: 'git switch [-c] <branch>', summary: 'Switch to a branch or create one.', examples: ['git switch main', 'git switch -c feature/ui'] },
+  restore: { usage: 'git restore [--staged] <file...>', summary: 'Restore working files or move staged changes back to the working tree.', examples: ['git restore app.js', 'git restore --staged app.js'] },
+  merge: { usage: 'git merge <branch>', summary: 'Join another branch into the current branch.', examples: ['git merge feature/auth'], note: 'CommitFlow demonstrates fast-forward and merge-commit histories. It does not simulate conflict resolution yet.' },
+  rebase: { usage: 'git rebase <upstream>', summary: 'Replay current-branch commits on top of another branch.', examples: ['git rebase main'], note: 'Replayed commits intentionally receive new commit IDs.' },
+  'cherry-pick': { usage: 'git cherry-pick <commit>', summary: 'Apply one commit change set onto the current branch.', examples: ['git cherry-pick feature/hotfix'], note: 'The copied change becomes a new commit with a new ID.' },
+  tag: { usage: 'git tag [-d] [name] [commit]', summary: 'List, create, or delete lightweight tags.', examples: ['git tag v1.0.0', 'git tag -d v1.0.0'] },
+  reset: { usage: 'git reset [--soft|--mixed|--hard] <commit>', summary: 'Move HEAD and optionally reset the index and working tree.', examples: ['git reset --soft HEAD~1', 'git reset --mixed HEAD~1', 'git reset --hard HEAD~1'], note: '--hard discards tracked working-tree changes.' },
+  revert: { usage: 'git revert <commit>', summary: 'Create a new commit that reverses an earlier commit.', examples: ['git revert HEAD', 'git revert HEAD~2'], note: 'The original commit remains in history and the revert receives a new ID.' },
+  stash: { usage: 'git stash [push|pop|list|clear] [-m <message>]', summary: 'Temporarily store or restore uncommitted work.', examples: ['git stash -m "WIP navigation"', 'git stash list', 'git stash pop'] },
+  status: { usage: 'git status [-s|--short]', summary: 'Inspect the branch, staging area, and working tree.', examples: ['git status', 'git status --short'] },
+  log: { usage: 'git log [-n N] [--oneline] [--graph]', summary: 'Read commit history from newest to oldest.', examples: ['git log', 'git log --oneline --graph', 'git log -n 3'] },
+  diff: { usage: 'git diff [--staged|--cached]', summary: 'Compare working changes or staged changes.', examples: ['git diff', 'git diff --staged'] },
+  show: { usage: 'git show [commit]', summary: 'Inspect commit identity, author, message, and tree metadata.', examples: ['git show', 'git show HEAD~1'] },
+};
+
+export function formatCommandHelpText(command: string): string | null {
+  const entry = COMMAND_HELP[command];
+  if (!entry) return null;
+
+  return [
+    `\x1b[1mgit ${command}\x1b[0m`,
+    entry.summary,
+    '',
+    '\x1b[1mUsage\x1b[0m',
+    `  \x1b[36m${entry.usage}\x1b[0m`,
+    '',
+    '\x1b[1mExamples\x1b[0m',
+    ...entry.examples.map((example) => `  \x1b[33m${example}\x1b[0m`),
+    ...(entry.note ? ['', `\x1b[1mCommitFlow note\x1b[0m`, `  ${entry.note}`] : []),
+  ].join('\n');
+}
+
 export function formatHelpText(): string {
   return [
     '\x1b[1mCommitFlow - In-Browser Git Playground\x1b[0m',
+    'A focused Git simulation for learning repository state and history.',
     '',
-    'Supported Git Commands:',
+    'Supported Git Commands (simulated locally in your browser):',
     '  \x1b[36mgit init\x1b[0m                         Initialize an empty repository',
     '  \x1b[36mgit add <file... | .>\x1b[0m            Stage files for commit',
     '  \x1b[36mgit commit -m "<msg>"\x1b[0m           Record staged changes to repository',
@@ -133,13 +180,18 @@ export function formatHelpText(): string {
     '  \x1b[36mgit rebase <upstream>\x1b[0m            Reapply commits on top of another branch',
     '  \x1b[36mgit cherry-pick <sha>\x1b[0m            Apply changes from existing commit',
     '  \x1b[36mgit tag [-d] [name] [sha]\x1b[0m        Create, list, or delete tags',
-    '  \x1b[36mgit reset [--soft|--hard] <sha>\x1b[0m Reset current HEAD to specified state',
+    '  \x1b[36mgit reset [--soft|--mixed|--hard] <sha>\x1b[0m Reset HEAD, index, or working tree',
     '  \x1b[36mgit revert <sha>\x1b[0m                 Revert an existing commit',
     '  \x1b[36mgit stash [pop|list|clear]\x1b[0m       Stash changes away in dirty working tree',
     '  \x1b[36mgit status [-s|--short]\x1b[0m          Show working tree and staging status',
     '  \x1b[36mgit log [-n N] [--oneline]\x1b[0m      Show commit history',
     '  \x1b[36mgit diff [--staged|--cached]\x1b[0m    Show differences in tree or staging area',
     '  \x1b[36mgit show <sha>\x1b[0m                   Inspect commit details and tree metadata',
+    '',
+    'Help:',
+    '  \x1b[35mgit --help\x1b[0m                        Show this command reference',
+    '  \x1b[35mgit help <command>\x1b[0m                Show usage, examples, and simulation notes',
+    '  \x1b[35mgit <command> --help\x1b[0m             Show focused command help',
     '',
     'Filesystem & Utility Commands:',
     '  \x1b[33mtouch <file>\x1b[0m                     Create an empty file',

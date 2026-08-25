@@ -20,6 +20,14 @@ describe('Command Tokenizer', () => {
 });
 
 describe('Command Parser', () => {
+  it('parses top-level and focused help forms', () => {
+    expect(parseCommand('git --help')).toMatchObject({ type: 'help', args: [] });
+    expect(parseCommand('git -h')).toMatchObject({ type: 'help', args: [] });
+    expect(parseCommand('git help')).toMatchObject({ type: 'help', args: [] });
+    expect(parseCommand('git help rebase')).toMatchObject({ type: 'help', args: ['rebase'] });
+    expect(parseCommand('git rebase --help')).toMatchObject({ type: 'rebase', flags: { help: true } });
+  });
+
   it('parses git init with branch flag', () => {
     const parsed = parseCommand('git init -b main');
     expect(parsed.type).toBe('init');

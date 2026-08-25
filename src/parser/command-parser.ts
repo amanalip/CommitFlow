@@ -248,6 +248,24 @@ export function parseCommand(rawInput: string): ParsedCommand {
     };
   }
 
+  if (tokens[1] === '--help' || tokens[1] === '-h') {
+    return {
+      raw: rawInput,
+      type: 'help',
+      args: [],
+      flags: {},
+    };
+  }
+
+  if (tokens[1] === 'help') {
+    return {
+      raw: rawInput,
+      type: 'help',
+      args: tokens.slice(2),
+      flags: {},
+    };
+  }
+
   const subcommand = tokens[1];
   const rest = tokens.slice(2);
   const flags: Record<string, string | boolean | string[]> = {};

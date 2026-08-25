@@ -4,6 +4,9 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## P0: Repository and command correctness
 
+- [x] Support `git --help`, `git -h`, and `git help` as top-level help commands.
+- [x] Support focused help through `git help <command>` and `git <command> --help` for every simulated Git command.
+- [x] Keep help output explicit about which commands and options CommitFlow simulates.
 - [x] Isolate Explainer repositories from Playground state so running an explanation never resets or changes the active playground.
 - [x] Preserve the Playground repository, command history, selected scenario, and current step when entering and leaving Explainer mode.
 - [ ] Stop and cancel scenario playback when changing modes, resetting the repository, or loading shared history.
@@ -117,17 +120,30 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 - [ ] Replace the basic scenario select with a richer scenario browser or popover.
 - [ ] Show category, difficulty, summary, estimated time, step count, and progress for each scenario.
+- [ ] Expand the library beyond the seven introductory scenarios with focused lessons for status and diff, staging, restore, amend, stash, branch cleanup, merge commits, reset modes, and history inspection.
+- [ ] Give every scenario learning objectives, prerequisites, key concepts, and a completion takeaway.
+- [ ] Increase scenario depth so lessons demonstrate inspection before mutation and verify the result afterward.
 - [ ] Display the current command prominently during playback.
 - [ ] Display the current step explanation and expected result.
+- [ ] Distinguish the last completed step from the next command so the UI never describes an action that has not run yet.
+- [ ] Show command type, affected area, expected HEAD movement, expected commit creation, and expected file-state change for each step.
+- [ ] Echo scenario commands and their output in the terminal exactly as if the learner typed them.
+- [ ] Do not advance progress when a scenario command fails.
 - [ ] Clarify whether the step description refers to the next step or the step just completed.
 - [ ] Replace the ambiguous completion display with an explicit Scenario Complete state.
 - [ ] Keep Previous, Next, Play, Pause, Restart, and speed controls visually grouped.
 - [ ] Use more readable playback delays and avoid a default speed that hides intermediate state changes.
+- [ ] Replace raw millisecond speed values with learner-friendly labels and pause longer on commits, merges, rebases, and resets.
 - [ ] Add a true divergent merge scenario that creates and visualizes a merge commit with two parents.
 - [ ] Verify that the cherry-pick, rebase, detached HEAD, undo, and stash lessons teach correct file-state behavior.
 - [ ] Avoid rebuilding every previous step during Step Back by using engine checkpoints or repository snapshots.
+- [ ] Preserve commit IDs when moving backward and forward through already-executed scenario steps.
+- [ ] Explain when Git intentionally creates new commit IDs during commit, amend, revert, cherry-pick, and rebase.
+- [ ] Keep graph nodes stable and avoid automatic refitting after every scenario action.
 - [ ] Keep explanation state synchronized when stepping backward.
 - [ ] Add a completion summary with the final graph and learned concepts.
+- [ ] Let learners inspect the command output, changed files, refs, HEAD, and resulting commit metadata for every completed step.
+- [ ] Add a compact scenario timeline that supports direct navigation to completed checkpoints.
 
 ## P1: State panels and quick actions
 
@@ -215,6 +231,11 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## Test coverage
 
+- [x] Test top-level and command-specific Git help forms.
+- [ ] Test that scenario failures do not advance progress.
+- [ ] Test that scenario Step Back preserves commit IDs for retained steps.
+- [ ] Test that scenario-driven commands and output appear in the terminal.
+- [ ] Test scenario metadata completeness and a meaningful minimum step depth.
 - [x] Test that Reset clears repository state and terminal state together.
 - [x] Test that theme switching preserves terminal output, history, input, and prompt state.
 - [ ] Test multi-character paste and quoted command paste in xterm.

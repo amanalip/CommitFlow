@@ -1,6 +1,6 @@
 import { parseCommand } from './command-parser';
 import { findClosestGitCommand } from './suggestions';
-import { formatStatusOutput, formatLogOutput, formatHelpText } from './output-formatter';
+import { formatStatusOutput, formatLogOutput, formatHelpText, formatCommandHelpText } from './output-formatter';
 import { gitBridge } from '../engine/git-bridge';
 import { CommandResult } from '../model/types';
 
@@ -37,12 +37,30 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
   }
 
   if (parsed.type === 'help') {
+    const command = parsed.args[0];
+    const focusedHelp = command ? formatCommandHelpText(command) : null;
     return {
       rawCommand: rawInput,
-      stdout: formatHelpText(),
+      stdout: command && focusedHelp ? focusedHelp : command ? '' : formatHelpText(),
+      stderr: command && !focusedHelp
+        ? `\x1b[31mgit: no simulated help topic for '${command}'. Run 'git --help' to see supported commands.\x1b[0m`
+        : '',
+      exitCode: command && !focusedHelp ? 1 : 0,
+      explanation: command
+        ? `Displayed usage, examples, and simulation notes for git ${command}.`
+        : 'Displayed the complete CommitFlow command reference.',
+      state,
+    };
+  }
+
+  if (parsed.flags['help'] || parsed.flags['h']) {
+    const focusedHelp = formatCommandHelpText(parsed.type);
+    return {
+      rawCommand: rawInput,
+      stdout: focusedHelp || formatHelpText(),
       stderr: '',
       exitCode: 0,
-      explanation: 'Displayed list of available commands and usage.',
+      explanation: `Displayed usage, examples, and simulation notes for git ${parsed.type}.`,
       state,
     };
   }
