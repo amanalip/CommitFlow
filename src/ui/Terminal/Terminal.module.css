@@ -56,6 +56,23 @@
   gap: 8px;
 }
 
+.busyStatus {
+  min-width: 108px;
+  color: var(--text-secondary, #cbd5e1);
+  font-size: 11px;
+  text-align: right;
+}
+
+.busyDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent-color, #38bdf8);
+  animation: busyPulse 1s ease-in-out infinite;
+}
+
 .actionButton {
   background: transparent;
   border: none;
@@ -69,6 +86,11 @@
 .actionButton:hover {
   color: var(--text-color, #f8fafc);
   background: rgba(255, 255, 255, 0.05);
+}
+
+.actionButton:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .actionButton:focus-visible {
@@ -109,4 +131,12 @@
   background: var(--border-color, #334155);
   border: 3px solid var(--terminal-bg, #0b1120);
   border-radius: 999px;
+}
+
+@keyframes busyPulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .busyDot { animation: none; }
 }

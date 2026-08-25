@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
@@ -6,6 +6,7 @@ import '@xterm/xterm/css/xterm.css';
 import { RepoState, CommandResult } from '../../model/types';
 import { THEMES, ThemeMode } from '../../theme/theme';
 import { getAutocompleteCandidates } from '../../parser/suggestions';
+import { normalizeTerminalInput } from './terminal-input';
 import styles from './Terminal.module.css';
 
 interface TerminalProps {
@@ -39,6 +40,7 @@ export function Terminal({
   const isExecuting = useRef<boolean>(false);
   const mountedResetKey = useRef<number>(resetKey);
   const lastExternalCommandId = useRef(0);
+  const [isBusy, setIsBusy] = useState(false);
 
   const repoStateRef = useRef<RepoState>(repoState);
   repoStateRef.current = repoState;
@@ -103,7 +105,7 @@ export function Terminal({
 
   const insertText = useCallback((value: string) => {
     if (!value) return;
-    const normalized = value.replace(/\r?\n/g, ' ');
+    const normalized = normalizeTerminalInput(value);
     const before = currentLine.current.slice(0, cursorPosition.current);
     const after = currentLine.current.slice(cursorPosition.current);
     currentLine.current = before + normalized + after;
@@ -126,10 +128,14 @@ export function Terminal({
     commandHistory.current.push(line);
     historyIndex.current = commandHistory.current.length;
     isExecuting.current = true;
+    setIsBusy(true);
 
     try {
       const result = await onExecuteCommandRef.current(line);
-      if (result.stdout) {
+      if (line === 'clear' && result.exitCode === 0) {
+        term.clear();
+        term.write('\x1b[2J\x1b[H');
+      } else if (result.stdout) {
         term.write(result.stdout.replace(/\n/g, '\r\n') + '\r\n');
       }
       if (result.stderr) {
@@ -140,9 +146,25 @@ export function Terminal({
       term.write(`\x1b[31m${message}\x1b[0m\r\n`);
     } finally {
       isExecuting.current = false;
+      setIsBusy(false);
       writePrompt();
+      term.focus();
     }
   }, [writePrompt]);
+
+  const clearTerminal = useCallback((preserveInput = false) => {
+    const term = xtermInstance.current;
+    if (!term) return;
+    if (!preserveInput) {
+      currentLine.current = '';
+      cursorPosition.current = 0;
+    }
+    term.clear();
+    term.write('\x1b[2J\x1b[H');
+    if (preserveInput) redrawInput();
+    else writePrompt();
+    term.focus();
+  }, [redrawInput, writePrompt]);
 
   const completeInput = useCallback(() => {
     const state = repoStateRef.current;
@@ -231,8 +253,7 @@ export function Terminal({
         writePrompt();
         return;
       case '\x0c':
-        term.write('\x1b[2J\x1b[H');
-        redrawInput();
+        clearTerminal(true);
         return;
       case '\x15':
         currentLine.current = currentLine.current.slice(cursorPosition.current);
@@ -246,7 +267,7 @@ export function Terminal({
         if (data.startsWith('\x1b')) return;
         insertText(data);
     }
-  }, [completeInput, executeCurrentLine, insertText, redrawInput, replaceInput, writePrompt]);
+  }, [clearTerminal, completeInput, executeCurrentLine, insertText, redrawInput, replaceInput, writePrompt]);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -303,6 +324,7 @@ export function Terminal({
     xtermInstance.current.clear();
     xtermInstance.current.write('\x1b[2J\x1b[H');
     writeWelcome();
+    xtermInstance.current.focus();
   }, [resetKey, writeWelcome]);
 
   useEffect(() => {
@@ -317,6 +339,7 @@ export function Terminal({
     if (externalCommand.result.stdout) term.write(`${externalCommand.result.stdout.replace(/\n/g, '\r\n')}\r\n`);
     if (externalCommand.result.stderr) term.write(`${externalCommand.result.stderr.replace(/\n/g, '\r\n')}\r\n`);
     writePrompt();
+    term.focus();
   }, [externalCommand, getPrompt, writePrompt]);
 
   useEffect(() => {
@@ -324,17 +347,6 @@ export function Terminal({
       redrawInput();
     }
   }, [repoState.initialized, repoState.head.type, repoState.head.target, redrawInput]);
-
-  const handleClear = () => {
-    const term = xtermInstance.current;
-    if (!term) return;
-    currentLine.current = '';
-    cursorPosition.current = 0;
-    term.clear();
-    term.write('\x1b[2J\x1b[H');
-    writePrompt();
-    term.focus();
-  };
 
   return (
     <div className={styles.terminalContainer} aria-label="CommitFlow terminal">
@@ -348,7 +360,10 @@ export function Terminal({
           <span className={styles.terminalTitle}>bash / commitflow</span>
         </div>
         <div className={styles.terminalActions}>
-          <button type="button" className={styles.actionButton} onClick={handleClear}>
+          <span className={styles.busyStatus} aria-live="polite">
+            {isBusy && <><span className={styles.busyDot} aria-hidden="true" /> Running command</>}
+          </span>
+          <button type="button" className={styles.actionButton} onClick={() => clearTerminal(false)} disabled={isBusy}>
             Clear
           </button>
         </div>

@@ -48,10 +48,10 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Preserve scrollback and command history when toggling themes.
 - [x] Use xterm `onData` for normal text entry, multi-character paste, and composed input.
 - [x] Reserve `onKey` for navigation and keyboard shortcuts.
-- [ ] Confirm paste works for multiline and quoted commands, and define whether multiline input is supported or rejected.
-- [ ] Keep the terminal focused after Clear, Reset, scenario steps, and state-panel quick actions when appropriate.
-- [ ] Make the terminal header Clear action behave consistently with the `clear` command and `Ctrl+L`.
-- [ ] Show an unobtrusive busy state while a command is executing instead of silently ignoring input.
+- [x] Confirm paste works for multiline and quoted commands, and define whether multiline input is supported or rejected.
+- [x] Keep the terminal focused after Clear, Reset, scenario steps, and state-panel quick actions when appropriate.
+- [x] Make the terminal header Clear action behave consistently with the `clear` command and `Ctrl+L`.
+- [x] Show an unobtrusive busy state while a command is executing instead of silently ignoring input.
 
 ## P0: Explainer correctness
 
@@ -103,7 +103,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Keep a small inset around xterm only if the inset matches the terminal background.
 - [x] Give the terminal header a deliberate surface contrast from the terminal body in both themes.
 - [x] Restyle the scrollbar to match the selected theme.
-- [ ] Improve terminal selection colors and cursor visibility in both themes.
+- [x] Improve terminal selection colors and cursor visibility in both themes.
 - [ ] Standardize the terminal title, window dots, Clear action, padding, and typography with the rest of the application.
 
 ## P1: Graph usability and appearance
@@ -279,7 +279,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Test scenario metadata completeness and a meaningful minimum step depth.
 - [x] Test that Reset clears repository state and terminal state together.
 - [x] Test that theme switching preserves terminal output, history, input, and prompt state.
-- [ ] Test multi-character paste and quoted command paste in xterm.
+- [x] Test multi-character paste and quoted command paste in xterm.
 - [ ] Test quick actions while the terminal is focused.
 - [x] Test per-file Unstage with multiple staged files.
 - [x] Test `git rm` and `git rm --cached` independently from shell `rm`.
