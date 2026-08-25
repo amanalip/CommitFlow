@@ -14,6 +14,7 @@ let defaultAuthor = {
 };
 
 let stashList: { id: number; message: string; staged: WorkingFile[]; unstaged: WorkingFile[]; untracked: string[] }[] = [];
+let previousBranch = '';
 
 export function setAuthor(name: string, email: string) {
   defaultAuthor = { name, email };
@@ -499,6 +500,15 @@ export async function executeCheckout(target: string, createBranch = false, star
   const fs = getFS();
   const pfs = fs.promises;
 
+  const current = await git.currentBranch({ fs, dir: REPO_DIR });
+
+  if (target === '-') {
+    if (!previousBranch) {
+      throw new Error('fatal: No previous branch available');
+    }
+    target = previousBranch;
+  }
+
   if (createBranch) {
     let startOid: string | undefined = undefined;
     if (startPoint) {
@@ -512,6 +522,9 @@ export async function executeCheckout(target: string, createBranch = false, star
       checkout: true,
     });
     await writeTextFile(pfs, `${REPO_DIR}/.git/HEAD`, `ref: refs/heads/${target}\n`);
+    if (current && current !== target) {
+      previousBranch = current;
+    }
     return `Switched to a new branch '${target}'`;
   }
 
@@ -523,6 +536,9 @@ export async function executeCheckout(target: string, createBranch = false, star
       dir: REPO_DIR,
       ref: target,
     });
+    if (current && current !== target) {
+      previousBranch = current;
+    }
     return `Switched to branch '${target}'`;
   }
 
@@ -534,6 +550,9 @@ export async function executeCheckout(target: string, createBranch = false, star
       dir: REPO_DIR,
       ref: oid,
     });
+    if (current) {
+      previousBranch = current;
+    }
     return `Note: switching to '${target}'.\nYou are in 'detached HEAD' state. HEAD is now at ${oid.slice(0, 7)}`;
   } catch {
     throw new Error(`pathspec '${target}' did not match any file(s) known to git`);
@@ -894,5 +913,6 @@ export async function executeListFiles(): Promise<string[]> {
 export async function resetRepository(): Promise<RepoState> {
   resetFS();
   stashList = [];
+  previousBranch = '';
   return snapshotRepoState();
 }

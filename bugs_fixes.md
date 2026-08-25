@@ -30,59 +30,63 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
    - *Problem*: Long flags like `--allow-empty`, `--soft`, and `--hard` swallowed subsequent arguments like `-m "message"`.
    - *Fix*: Added `KNOWN_BOOLEAN_FLAGS` set to ensure boolean flags do not consume following positional arguments.
 
-7. **Detached HEAD to Named Branch Transition**:
+7. **Previous Branch Navigation Support (`git checkout -`)**:
+   - *Problem*: Standard Git shortcut `git checkout -` and `git switch -` for returning to the previous branch failed with "pathspec not found".
+   - *Fix*: Added `previousBranch` state tracking and hyphen alias resolution in `executeCheckout`.
+
+8. **Detached HEAD to Named Branch Transition**:
    - *Problem*: Running `git checkout <branch>` from detached HEAD state did not update `.git/HEAD` symbolic reference.
    - *Fix*: Explicitly updated `.git/HEAD` with `ref: refs/heads/<branch>` on checkout in `src/engine/git-worker.ts`.
 
-8. **Chronological & Topological Commit Ordering**:
+9. **Chronological & Topological Commit Ordering**:
    - *Problem*: `snapshotRepoState` extracted Map values without topological sorting, causing out-of-order nodes in React Flow.
    - *Fix*: Implemented Kahn's topological sort with timestamp tie-breakers for commit arrays.
 
-9. **Corrupted URL Hash Exception Handling**:
-   - *Problem*: Visiting malformed share URLs crashed `JSON.parse` during decompression.
-   - *Fix*: Wrapped URL hash decoder in a try-catch block returning an empty array on invalid inputs.
+10. **Corrupted URL Hash Exception Handling**:
+    - *Problem*: Visiting malformed share URLs crashed `JSON.parse` during decompression.
+    - *Fix*: Wrapped URL hash decoder in a try-catch block returning an empty array on invalid inputs.
 
-10. **Branch Deletion Parser Handling**:
+11. **Branch Deletion Parser Handling**:
     - *Problem*: `git branch --delete <branch>` failed to extract branch names when parsed as a flag parameter.
     - *Fix*: Normalized `-d`, `-D`, and `--delete` flag extraction across parser and command map.
 
-11. **Branch Rename Support (`git branch -m`)**:
+12. **Branch Rename Support (`git branch -m`)**:
     - *Problem*: Renaming branches via `git branch -m [old] <new>` was unrecognized and failed.
     - *Fix*: Added full branch rename engine handler updating `.git/refs/heads` and `.git/HEAD`.
 
-12. **Git Restore File and Staging Support**:
+13. **Git Restore File and Staging Support**:
     - *Problem*: Modern `git restore` and `git restore --staged` commands threw unrecognized command errors.
     - *Fix*: Added `executeRestore` restoring modified files to HEAD and resetting index entries.
 
-13. **Staged Diff Support (`git diff --staged` / `--cached`)**:
+14. **Staged Diff Support (`git diff --staged` / `--cached`)**:
     - *Problem*: `git diff` only compared working tree files and ignored staged changes when requested with `--staged` or `--cached`.
     - *Fix*: Added staged matrix diff inspection in `executeDiff(staged = true)`.
 
-14. **Short Status Output (`git status -s`)**:
+15. **Short Status Output (`git status -s`)**:
     - *Problem*: `git status -s` printed full status text instead of standard short two-column format.
     - *Fix*: Added short status formatter output in `src/parser/output-formatter.ts`.
 
-15. **Git Log Limit and Reverse Chronological Order**:
+16. **Git Log Limit and Reverse Chronological Order**:
     - *Problem*: `git log` printed oldest commits first and ignored `-n <limit>` flags.
     - *Fix*: Added reverse chronological commit ordering and limit slicing in `formatLogOutput`.
 
-16. **Filesystem Append Redirection (`>>`) Support**:
+17. **Filesystem Append Redirection (`>>`) Support**:
     - *Problem*: File appends did not preserve existing content properly in virtual filesystem writes.
     - *Fix*: Read existing file content and appended before writing in `executeWriteFile`.
 
-17. **Missing Implementation for Git Diff & Git Show**:
+18. **Missing Implementation for Git Diff & Git Show**:
     - *Problem*: `git diff` and `git show` were registered as valid commands in parser but threw "Unsupported command" errors.
     - *Fix*: Implemented `executeDiff` and `executeShow` with color-coded additions, deletions, and metadata formatting.
 
-18. **Missing Implementation for Git Stash & Amend**:
+19. **Missing Implementation for Git Stash & Amend**:
     - *Problem*: `git stash` and `git commit --amend` were not wired to engine handlers.
     - *Fix*: Implemented `executeStash` (push, pop, list, clear) and commit amending with parent preservation.
 
-19. **Relative Merge Commit Ref Resolution (`HEAD^2`)**:
+20. **Relative Merge Commit Ref Resolution (`HEAD^2`)**:
     - *Problem*: Caret refs only matched trailing `^` characters without index numbers, failing on second parent `HEAD^2`.
     - *Fix*: Added regex resolution for `HEAD^N` targeting specific merge parents.
 
-20. **Terminal Line Editing & Cursor Control**:
+21. **Terminal Line Editing & Cursor Control**:
     - *Problem*: ArrowLeft, ArrowRight, Home, End, Ctrl+A, Ctrl+E, Ctrl+U, and Ctrl+C were ignored or produced unescaped characters.
     - *Fix*: Added full inline buffer navigation and keyboard shortcut dispatchers in `Terminal.tsx`.
 
@@ -118,7 +122,7 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
 
 ---
 
-## 3. Test Suite Enhancements (67 Automated Tests Across 14 Suites)
+## 3. Test Suite Enhancements (70 Automated Tests Across 16 Suites)
 
 - **Tokenizer and Parser Tests (19 Tests - `tests/parser.test.ts`)**:
   - Quoted strings with special characters and semicolons.
@@ -145,6 +149,11 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
   - Filesystem read, write, and append operations.
   - Multi-file staging and creation.
   - Tag deletion with `-d`.
+- **Checkout Dash Tests (2 Tests - `tests/checkout_dash.test.ts`)**:
+  - Switching back to previous branch with `git checkout -`.
+  - Switching back to previous branch with `git switch -`.
+- **Commit Inspector Model Tests (1 Test - `tests/commit_inspector_model.test.ts`)**:
+  - Commit metadata structure, author/committer object integrity, and branch mapping.
 - **Staged Diff Tests (2 Tests - `tests/diff_staged.test.ts`)**:
   - Showing new staged file diffs with `git diff --staged`.
   - Showing modified staged file diffs with `git diff --cached`.
