@@ -32,10 +32,25 @@ describe('Command Parser', () => {
     expect(parsed.args).toEqual(['index.js', 'style.css']);
   });
 
-  it('parses git checkout -b feature', () => {
-    const parsed = parseCommand('git checkout -b feature/login');
-    expect(parsed.type).toBe('checkout');
-    expect(parsed.flags['b']).toBe('feature/login');
+  it('parses git checkout -b and git switch -c', () => {
+    const p1 = parseCommand('git checkout -b feature/login');
+    expect(p1.type).toBe('checkout');
+    expect(p1.flags['b']).toBe('feature/login');
+
+    const p2 = parseCommand('git switch -c feature/signup');
+    expect(p2.type).toBe('switch');
+    expect(p2.flags['c']).toBe('feature/signup');
+  });
+
+  it('parses git restore commands', () => {
+    const p1 = parseCommand('git restore index.js');
+    expect(p1.type).toBe('restore');
+    expect(p1.args).toEqual(['index.js']);
+
+    const p2 = parseCommand('git restore --staged index.js');
+    expect(p2.type).toBe('restore');
+    expect(p2.flags['staged']).toBe(true);
+    expect(p2.args).toEqual(['index.js']);
   });
 
   it('parses git reset --hard HEAD~1', () => {

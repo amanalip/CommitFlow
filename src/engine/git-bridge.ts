@@ -52,6 +52,9 @@ class GitBridge {
         case 'RM':
           output = await workerEngine.executeRm(payload.files, payload.cached);
           break;
+        case 'RESTORE':
+          output = await workerEngine.executeRestore(payload.files, payload.staged);
+          break;
         case 'COMMIT': {
           const res = await workerEngine.executeCommit(payload.message, payload.allowEmpty, payload.amend);
           output = res.output;
@@ -62,7 +65,7 @@ class GitBridge {
           output = await workerEngine.executeBranch(payload);
           break;
         case 'CHECKOUT':
-          output = await workerEngine.executeCheckout(payload.target, payload.createBranch);
+          output = await workerEngine.executeCheckout(payload.target, payload.createBranch, payload.startPoint);
           break;
         case 'MERGE':
           output = await workerEngine.executeMerge(payload.theirs, payload.message);

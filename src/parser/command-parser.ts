@@ -5,19 +5,19 @@ export function tokenizeCommandLine(input: string): string[] {
   let current = '';
   let inDoubleQuote = false;
   let inSingleQuote = false;
-  let escape = false;
+  let escapeNext = false;
 
   for (let i = 0; i < input.length; i++) {
     const char = input[i];
 
-    if (escape) {
+    if (escapeNext) {
       current += char;
-      escape = false;
+      escapeNext = false;
       continue;
     }
 
     if (char === '\\' && !inSingleQuote) {
-      escape = true;
+      escapeNext = true;
       continue;
     }
 
@@ -70,6 +70,7 @@ const KNOWN_BOOLEAN_FLAGS = new Set([
   'no-ff',
   'stat',
   'patch',
+  'staged',
 ]);
 
 export function parseCommand(rawInput: string): ParsedCommand {
@@ -190,6 +191,15 @@ export function parseCommand(rawInput: string): ParsedCommand {
     };
   }
 
+  if (firstToken === 'echo') {
+    return {
+      raw: rawInput,
+      type: 'echo',
+      args: tokens.slice(1),
+      flags: {},
+    };
+  }
+
   if (firstToken === 'help') {
     return {
       raw: rawInput,
@@ -225,6 +235,10 @@ export function parseCommand(rawInput: string): ParsedCommand {
 
   for (let i = 0; i < rest.length; i++) {
     const token = rest[i];
+
+    if (token === '--') {
+      continue;
+    }
 
     if (token.startsWith('--')) {
       const eqIndex = token.indexOf('=');
@@ -292,6 +306,7 @@ export function parseCommand(rawInput: string): ParsedCommand {
     'reset',
     'revert',
     'stash',
+    'restore',
   ];
 
   if (!validCommands.includes(subcommand as GitCommandType)) {

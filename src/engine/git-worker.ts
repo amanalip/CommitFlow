@@ -373,6 +373,29 @@ export async function executeRm(filepaths: string[], cached = false): Promise<st
   return '';
 }
 
+export async function executeRestore(filepaths: string[], staged = false): Promise<string> {
+  const fs = getFS();
+  const pfs = fs.promises;
+
+  for (const file of filepaths) {
+    const cleanFile = file.replace(/^\.\//, '');
+    if (staged) {
+      await git.resetIndex({ fs, dir: REPO_DIR, filepath: cleanFile });
+    } else {
+      try {
+        const headOid = await resolveCommitRef('HEAD');
+        const commit = await git.readCommit({ fs, dir: REPO_DIR, oid: headOid });
+        const { blob } = await git.readBlob({ fs, dir: REPO_DIR, oid: commit.commit.tree, filepath: cleanFile });
+        const str = Buffer.from(blob).toString('utf8');
+        await writeTextFile(pfs, `${REPO_DIR}/${cleanFile}`, str);
+      } catch {
+        // Untracked or deleted
+      }
+    }
+  }
+  return '';
+}
+
 export async function executeCommit(
   message: string,
   _allowEmpty = false,
@@ -419,8 +442,32 @@ export async function executeBranch(args: {
   create?: string;
   delete?: string;
   forceDelete?: string;
+  rename?: { oldName?: string; newName: string };
 }): Promise<string> {
   const fs = getFS();
+  const pfs = fs.promises;
+
+  if (args.rename) {
+    const current = await git.currentBranch({ fs, dir: REPO_DIR });
+    const oldName = args.rename.oldName || current || 'main';
+    const newName = args.rename.newName;
+    const oid = await git.resolveRef({ fs, dir: REPO_DIR, ref: oldName });
+
+    await git.writeRef({
+      fs,
+      dir: REPO_DIR,
+      ref: `refs/heads/${newName}`,
+      value: oid,
+      force: true,
+    });
+    await git.deleteBranch({ fs, dir: REPO_DIR, ref: oldName });
+
+    if (current === oldName) {
+      await writeTextFile(pfs, `${REPO_DIR}/.git/HEAD`, `ref: refs/heads/${newName}\n`);
+    }
+    return `Renamed branch ${oldName} to ${newName}.`;
+  }
+
   if (args.create) {
     await git.branch({
       fs,
@@ -448,15 +495,20 @@ export async function executeBranch(args: {
     .join('\n');
 }
 
-export async function executeCheckout(target: string, createBranch = false): Promise<string> {
+export async function executeCheckout(target: string, createBranch = false, startPoint?: string): Promise<string> {
   const fs = getFS();
   const pfs = fs.promises;
 
   if (createBranch) {
+    let startOid: string | undefined = undefined;
+    if (startPoint) {
+      startOid = await resolveCommitRef(startPoint);
+    }
     await git.branch({
       fs,
       dir: REPO_DIR,
       ref: target,
+      object: startOid,
       checkout: true,
     });
     await writeTextFile(pfs, `${REPO_DIR}/.git/HEAD`, `ref: refs/heads/${target}\n`);

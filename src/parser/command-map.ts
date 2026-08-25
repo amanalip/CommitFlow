@@ -251,6 +251,31 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
     };
   }
 
+  if (parsed.type === 'restore') {
+    const isStaged = Boolean(parsed.flags['staged']);
+    const files = parsed.args;
+    if (files.length === 0) {
+      return {
+        rawCommand: rawInput,
+        stdout: '',
+        stderr: '\x1b[31mfatal: you must specify path(s) to restore\x1b[0m',
+        exitCode: 1,
+        state,
+      };
+    }
+    const res = await gitBridge.send('RESTORE', { files, staged: isStaged });
+    return {
+      rawCommand: rawInput,
+      stdout: res.output || '',
+      stderr: res.error ? `\x1b[31m${res.error}\x1b[0m` : '',
+      exitCode: res.success ? 0 : 1,
+      explanation: isStaged
+        ? `Unstaged changes for: ${files.join(', ')}.`
+        : `Restored working tree file(s): ${files.join(', ')}.`,
+      state: res.state,
+    };
+  }
+
   if (parsed.type === 'add') {
     if (parsed.args.length === 0 && !parsed.flags['A'] && !parsed.flags['all'] && !parsed.flags['a']) {
       return {
@@ -318,6 +343,46 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
   if (parsed.type === 'branch') {
     const isDelete = Boolean(parsed.flags['d'] || parsed.flags['delete']);
     const isForceDelete = Boolean(parsed.flags['D']);
+    let renameOld: string | undefined = undefined;
+    let renameNew: string | undefined = undefined;
+
+    if (parsed.flags['m'] || parsed.flags['M'] || parsed.flags['move']) {
+      const mVal =
+        typeof parsed.flags['m'] === 'string'
+          ? parsed.flags['m']
+          : typeof parsed.flags['M'] === 'string'
+          ? parsed.flags['M']
+          : undefined;
+
+      if (mVal && parsed.args.length > 0) {
+        renameOld = mVal;
+        renameNew = parsed.args[0];
+      } else if (mVal && parsed.args.length === 0) {
+        renameNew = mVal;
+      } else if (parsed.args.length >= 2) {
+        renameOld = parsed.args[0];
+        renameNew = parsed.args[1];
+      } else if (parsed.args.length === 1) {
+        renameNew = parsed.args[0];
+      }
+    }
+
+    if (renameNew) {
+      const res = await gitBridge.send('BRANCH', {
+        rename: { oldName: renameOld, newName: renameNew },
+      });
+      return {
+        rawCommand: rawInput,
+        stdout: res.output || '',
+        stderr: res.error ? `\x1b[31m${res.error}\x1b[0m` : '',
+        exitCode: res.success ? 0 : 1,
+        explanation: renameOld
+          ? `Renamed branch "${renameOld}" to "${renameNew}".`
+          : `Renamed current branch to "${renameNew}".`,
+        state: res.state,
+      };
+    }
+
     const branchName =
       (typeof parsed.flags['d'] === 'string'
         ? parsed.flags['d']
@@ -380,6 +445,7 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
         : typeof parsed.flags['c'] === 'string'
         ? parsed.flags['c']
         : parsed.args[0]);
+    const startPoint = parsed.args.length > (createBranch ? 0 : 1) ? parsed.args[parsed.args.length - 1] : undefined;
 
     if (!target) {
       return {
@@ -391,7 +457,7 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
       };
     }
 
-    const res = await gitBridge.send('CHECKOUT', { target, createBranch });
+    const res = await gitBridge.send('CHECKOUT', { target, createBranch, startPoint });
     return {
       rawCommand: rawInput,
       stdout: res.output || '',

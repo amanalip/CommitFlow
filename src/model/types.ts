@@ -81,6 +81,7 @@ export type GitCommandType =
   | 'reset'
   | 'revert'
   | 'stash'
+  | 'restore'
   | 'touch'
   | 'echo'
   | 'cat'

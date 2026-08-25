@@ -46,23 +46,31 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
     - *Problem*: `git branch --delete <branch>` failed to extract branch names when parsed as a flag parameter.
     - *Fix*: Normalized `-d`, `-D`, and `--delete` flag extraction across parser and command map.
 
-11. **Filesystem Append Redirection (`>>`) Support**:
+11. **Branch Rename Support (`git branch -m`)**:
+    - *Problem*: Renaming branches via `git branch -m [old] <new>` was unrecognized and failed.
+    - *Fix*: Added full branch rename engine handler updating `.git/refs/heads` and `.git/HEAD`.
+
+12. **Git Restore File and Staging Support**:
+    - *Problem*: Modern `git restore` and `git restore --staged` commands threw unrecognized command errors.
+    - *Fix*: Added `executeRestore` restoring modified files to HEAD and resetting index entries.
+
+13. **Filesystem Append Redirection (`>>`) Support**:
     - *Problem*: File appends did not preserve existing content properly in virtual filesystem writes.
     - *Fix*: Read existing file content and appended before writing in `executeWriteFile`.
 
-12. **Missing Implementation for Git Diff & Git Show**:
+14. **Missing Implementation for Git Diff & Git Show**:
     - *Problem*: `git diff` and `git show` were registered as valid commands in parser but threw "Unsupported command" errors.
     - *Fix*: Implemented `executeDiff` and `executeShow` with color-coded additions, deletions, and metadata formatting.
 
-13. **Missing Implementation for Git Stash & Amend**:
+15. **Missing Implementation for Git Stash & Amend**:
     - *Problem*: `git stash` and `git commit --amend` were not wired to engine handlers.
     - *Fix*: Implemented `executeStash` (push, pop, list, clear) and commit amending with parent preservation.
 
-14. **Relative Merge Commit Ref Resolution (`HEAD^2`)**:
+16. **Relative Merge Commit Ref Resolution (`HEAD^2`)**:
     - *Problem*: Caret refs only matched trailing `^` characters without index numbers, failing on second parent `HEAD^2`.
     - *Fix*: Added regex resolution for `HEAD^N` targeting specific merge parents.
 
-15. **Terminal Line Editing & Cursor Control**:
+17. **Terminal Line Editing & Cursor Control**:
     - *Problem*: ArrowLeft, ArrowRight, Home, End, Ctrl+A, Ctrl+E, Ctrl+U, and Ctrl+C were ignored or produced unescaped characters.
     - *Fix*: Added full inline buffer navigation and keyboard shortcut dispatchers in `Terminal.tsx`.
 
@@ -98,14 +106,16 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
 
 ---
 
-## 3. Test Suite Enhancements (58 Automated Tests Across 10 Suites)
+## 3. Test Suite Enhancements (63 Automated Tests Across 12 Suites)
 
-- **Tokenizer and Parser Tests (18 Tests - `tests/parser.test.ts`)**:
+- **Tokenizer and Parser Tests (19 Tests - `tests/parser.test.ts`)**:
   - Quoted strings with special characters and semicolons.
   - Boolean flags with follow-up `-m` arguments.
   - Shell redirect commands (`>` and `>>`).
   - Filesystem utilities (`touch`, `cat`, `ls`, `clear`).
   - Branch deletion flags (`-d`, `-D`, `--delete`).
+  - Git switch `-c` and git checkout `-b`.
+  - Git restore and restore `--staged`.
   - Stash push and pop parsing.
   - Diff and show argument parsing.
   - Log oneline and graph flags.
@@ -123,6 +133,12 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
   - Filesystem read, write, and append operations.
   - Multi-file staging and creation.
   - Tag deletion with `-d`.
+- **Branch Rename Tests (2 Tests - `tests/branch_rename.test.ts`)**:
+  - Renaming current active branch with `git branch -m <new>`.
+  - Renaming specific named branch with `git branch -m <old> <new>`.
+- **Restore Command Tests (2 Tests - `tests/restore.test.ts`)**:
+  - Restoring unstaged working tree changes back to HEAD state.
+  - Unstaging staged changes via `git restore --staged <file>`.
 - **Output Formatter Tests (6 Tests - `tests/output_formatter.test.ts`)**:
   - Uninitialized repository status formatting.
   - Clean working tree status formatting.
