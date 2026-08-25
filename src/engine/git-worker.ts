@@ -736,6 +736,64 @@ export async function executeReset(targetRef: string, mode: 'soft' | 'mixed' | '
   }
 }
 
+async function readCommitFiles(commitOid?: string): Promise<Map<string, Uint8Array>> {
+  const files = new Map<string, Uint8Array>();
+  if (!commitOid) return files;
+
+  const fs = getFS();
+  const commit = await git.readCommit({ fs, dir: REPO_DIR, oid: commitOid });
+  const paths = await git.listFiles({ fs, dir: REPO_DIR, ref: commitOid });
+
+  for (const filepath of paths) {
+    const { blob } = await git.readBlob({
+      fs,
+      dir: REPO_DIR,
+      oid: commit.commit.tree,
+      filepath,
+    });
+    files.set(filepath, blob);
+  }
+
+  return files;
+}
+
+async function applyCommitDelta(fromCommitOid: string | undefined, toCommitOid: string | undefined): Promise<void> {
+  const fs = getFS();
+  const pfs = fs.promises;
+  const [before, after] = await Promise.all([
+    readCommitFiles(fromCommitOid),
+    readCommitFiles(toCommitOid),
+  ]);
+  const paths = new Set([...before.keys(), ...after.keys()]);
+
+  for (const filepath of paths) {
+    const oldContent = before.get(filepath);
+    const newContent = after.get(filepath);
+    const unchanged =
+      oldContent !== undefined &&
+      newContent !== undefined &&
+      Buffer.from(oldContent).equals(Buffer.from(newContent));
+    if (unchanged) continue;
+
+    if (newContent === undefined) {
+      try {
+        await pfs.unlink(`${REPO_DIR}/${filepath}`);
+      } catch (error: any) {
+        if (error?.code !== 'ENOENT') throw error;
+      }
+      await git.remove({ fs, dir: REPO_DIR, filepath });
+      continue;
+    }
+
+    const parentDir = filepath.includes('/')
+      ? `${REPO_DIR}/${filepath.slice(0, filepath.lastIndexOf('/'))}`
+      : REPO_DIR;
+    await ensureDir(pfs, parentDir);
+    await pfs.writeFile(`${REPO_DIR}/${filepath}`, newContent);
+    await git.add({ fs, dir: REPO_DIR, filepath });
+  }
+}
+
 export async function executeRevert(commitRef: string): Promise<string> {
   const fs = getFS();
   const targetOid = await resolveCommitRef(commitRef);
@@ -748,18 +806,17 @@ export async function executeRevert(commitRef: string): Promise<string> {
   }
 
   const parentOid = parents[0];
-  const parentCommit = await git.readCommit({ fs, dir: REPO_DIR, oid: parentOid });
+  await applyCommitDelta(targetOid, parentOid);
 
-  await git.commit({
+  const sha = await git.commit({
     fs,
     dir: REPO_DIR,
     message,
-    tree: parentCommit.commit.tree,
     author: defaultAuthor,
     committer: defaultAuthor,
   });
 
-  return `[${targetOid.slice(0, 7)}] ${message.split('\n')[0]}`;
+  return `[${sha.slice(0, 7)}] ${message.split('\n')[0]}`;
 }
 
 export async function executeCherryPick(commitRef: string): Promise<string> {
@@ -767,6 +824,7 @@ export async function executeCherryPick(commitRef: string): Promise<string> {
   const targetOid = await resolveCommitRef(commitRef);
   const commitObj = await git.readCommit({ fs, dir: REPO_DIR, oid: targetOid });
   const message = commitObj.commit.message;
+  await applyCommitDelta(commitObj.commit.parent[0], targetOid);
 
   const sha = await git.commit({
     fs,
@@ -809,6 +867,8 @@ export async function executeRebase(upstreamBranch: string): Promise<string> {
   await git.checkout({ fs, dir: REPO_DIR, ref: current, force: true });
 
   for (const item of commitsToReplay) {
+    const original = await git.readCommit({ fs, dir: REPO_DIR, oid: item.oid });
+    await applyCommitDelta(original.commit.parent[0], item.oid);
     await git.commit({
       fs,
       dir: REPO_DIR,

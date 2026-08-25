@@ -11,9 +11,9 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Prevent Explainer preset buttons from starting overlapping simulations while another simulation is running.
 - [x] Distinguish shell `rm` from `git rm` in the parsed command model.
 - [x] Route `git rm` and `git rm --cached` to the Git engine instead of the filesystem-only delete handler.
-- [ ] Correct cherry-pick so it applies the selected commit's changes and produces the expected working tree and index.
-- [ ] Correct rebase so it reapplies each commit's tree changes instead of only recreating commit messages.
-- [ ] Correct revert so it applies an inverse patch to the current tree without replacing unrelated later changes.
+- [x] Correct cherry-pick so it applies the selected commit's changes and produces the expected working tree and index.
+- [x] Correct rebase so it reapplies each commit's tree changes instead of only recreating commit messages.
+- [x] Correct revert so it applies an inverse patch to the current tree without replacing unrelated later changes.
 - [ ] Verify and correct soft, mixed, and hard reset behavior, including index contents, working tree contents, and whether HEAD stays attached to the current branch.
 - [ ] Make `git branch -d` enforce merged-branch safety while keeping `-D` as the force-delete path.
 - [x] Return an error when `git restore` targets a missing or untracked path instead of silently succeeding.
@@ -229,9 +229,9 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Test light and dark export backgrounds.
 - [ ] Test clipboard success and failure states.
 - [ ] Test shared-history loading, replay progress, cancellation, and malformed payloads.
-- [ ] Test that cherry-pick applies the expected file changes.
-- [ ] Test that rebase preserves and reapplies feature file changes.
-- [ ] Test that revert preserves unrelated later changes.
+- [x] Test that cherry-pick applies the expected file changes.
+- [x] Test that rebase preserves and reapplies feature file changes.
+- [x] Test that revert preserves unrelated later changes.
 - [ ] Test soft, mixed, and hard reset index, working-tree, branch, and HEAD semantics.
 - [ ] Test stash restoration of staged, unstaged, deleted, and untracked files.
 - [x] Test status codes for staged added, modified, and deleted files.
