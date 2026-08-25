@@ -196,4 +196,28 @@ describe('Git Engine Workflow', () => {
     const lsAfter = await executeCommandLine('ls');
     expect(lsAfter.stdout).not.toContain('greeting.txt');
   });
+
+  it('handles multi-file staging and creation', async () => {
+    await executeCommandLine('git init');
+    await executeCommandLine('touch a.js b.js c.js');
+    expect(gitBridge.getState().untrackedFiles.length).toBe(3);
+
+    await executeCommandLine('git add a.js b.js');
+    expect(gitBridge.getState().stagedFiles.length).toBe(2);
+    expect(gitBridge.getState().untrackedFiles.length).toBe(1);
+  });
+
+  it('handles tag deletion', async () => {
+    await executeCommandLine('git init');
+    await executeCommandLine('touch file.txt');
+    await executeCommandLine('git add file.txt');
+    await executeCommandLine('git commit -m "c1"');
+
+    await executeCommandLine('git tag release-v1');
+    expect(gitBridge.getState().tags.some((t) => t.name === 'release-v1')).toBe(true);
+
+    const delRes = await executeCommandLine('git tag -d release-v1');
+    expect(delRes.exitCode).toBe(0);
+    expect(gitBridge.getState().tags.some((t) => t.name === 'release-v1')).toBe(false);
+  });
 });

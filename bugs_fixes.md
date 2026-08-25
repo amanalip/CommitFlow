@@ -80,23 +80,25 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
 8. **1-Click Stage All Action**: Added "+ Stage All (N)" button when multiple untracked/modified files are present.
 9. **1-Click Unstage Actions**: Added "− Unstage" buttons in the Staging Area panel to unstage files instantly.
 10. **1-Click Unstage All Action**: Added "− Unstage All (N)" button to unstage all staged files with one click.
-11. **Dedicated Stash Viewer Tab**: Added a Stashes tab in StatePanel allowing one-click stash inspection and "Pop" application.
+11. **Dedicated Stash Management Tab**: Added a Stashes tab in StatePanel allowing one-click stash inspection and "Pop" application.
 12. **1-Click Branch Switch**: Added "Switch" button in the Branches list to switch active branch directly.
-13. **HEAD Pulse Ring**: Added animated pulsing glow to the active HEAD commit node.
-14. **Color-Coded Branch Badges**: Branch badges now match topological lane colors with contrasting backgrounds.
-15. **Terminal Keyboard Navigation**: Added `ArrowLeft`, `ArrowRight`, `Ctrl+A`/`Home`, and `Ctrl+E`/`End` inline cursor navigation.
-16. **Terminal Shortcuts**: Added `Ctrl+L` to clear screen, `Ctrl+C` to cancel prompt, and `Ctrl+U` to erase line.
-17. **Global Modal Shortcuts**: Added global `Escape` key listener to dismiss all active inspector and explanation modals.
-18. **Quick Preset Examples in Explainer Mode**: Added quick-try buttons for popular commands (`git commit`, `git checkout -b`, `git merge`, `git rebase`, `git reset`, `git revert`, `git tag`).
-19. **Scenario Progress Indicator**: Added step counter and description tracker in the playback controls bar.
-20. **Accessible Color Contrast**: Tuned theme tokens for WCAG AA contrast across terminal text, graph nodes, and badges.
-21. **Clean Working Tree Guidance**: Informative empty states for clean working directories, empty staging areas, and fresh repos.
-22. **GitHub Logo & Navigation Link**: Header includes direct link to source repository.
-23. **Author Copyright Footer**: Added footer with author attribution and license notice.
+13. **Active Branch Identification**: Distinct badge and styling for active branch with disabled switch actions.
+14. **HEAD Pulse Ring**: Added animated pulsing glow to the active HEAD commit node.
+15. **Color-Coded Branch Badges**: Branch badges match topological lane colors with contrasting backgrounds.
+16. **Terminal Keyboard Navigation**: Added `ArrowLeft`, `ArrowRight`, `Ctrl+A`/`Home`, and `Ctrl+E`/`End` inline cursor navigation.
+17. **Terminal Shortcuts**: Added `Ctrl+L` to clear screen, `Ctrl+C` to cancel prompt, and `Ctrl+U` to erase line.
+18. **Global Modal Shortcuts**: Added global `Escape` key listener to dismiss all active inspector and explanation modals.
+19. **Explanation Modal Copy**: Added one-click copy button for command explanation text.
+20. **Quick Preset Examples in Explainer Mode**: Added quick-try buttons for popular commands (`git commit`, `git checkout -b`, `git merge`, `git rebase`, `git reset`, `git revert`, `git tag`).
+21. **Scenario Progress Indicator**: Added step counter and description tracker in the playback controls bar.
+22. **Accessible Color Contrast**: Tuned theme tokens for WCAG AA contrast across terminal text, graph nodes, and badges.
+23. **Clean Working Tree Guidance**: Informative empty states for clean working directories, empty staging areas, and fresh repos.
+24. **GitHub Logo & Navigation Link**: Header includes direct link to source repository.
+25. **Author Copyright Footer**: Added footer with author attribution and license notice.
 
 ---
 
-## 3. Test Suite Enhancements (56 Automated Tests Across 10 Suites)
+## 3. Test Suite Enhancements (58 Automated Tests Across 10 Suites)
 
 - **Tokenizer and Parser Tests (18 Tests - `tests/parser.test.ts`)**:
   - Quoted strings with special characters and semicolons.
@@ -109,7 +111,7 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
   - Log oneline and graph flags.
   - Commit amend parsing.
   - Multi-token auto-complete candidate generation.
-- **Engine Tests (9 Tests - `tests/engine.test.ts`)**:
+- **Engine Tests (11 Tests - `tests/engine.test.ts`)**:
   - Complete git workflow (`init`, `touch`, `add`, `commit`, `branch`, `checkout`, `merge`).
   - Branch deletion flow.
   - Detached HEAD transitions and branch reattachment.
@@ -119,6 +121,8 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
   - Git stash push and pop flow.
   - Git commit amend.
   - Filesystem read, write, and append operations.
+  - Multi-file staging and creation.
+  - Tag deletion with `-d`.
 - **Output Formatter Tests (6 Tests - `tests/output_formatter.test.ts`)**:
   - Uninitialized repository status formatting.
   - Clean working tree status formatting.
