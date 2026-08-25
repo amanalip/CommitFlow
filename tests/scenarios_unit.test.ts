@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { SCENARIOS } from '../src/scenarios/data';
 
 describe('Scenarios Data Validation', () => {
-  it('bundles at least 7 interactive learning scenarios', () => {
-    expect(SCENARIOS.length).toBeGreaterThanOrEqual(7);
+  it('bundles at least 14 interactive learning scenarios', () => {
+    expect(SCENARIOS.length).toBeGreaterThanOrEqual(14);
   });
 
   it('validates scenario schema and metadata', () => {
@@ -18,7 +18,10 @@ describe('Scenarios Data Validation', () => {
       expect(s.summary).toBeTruthy();
       expect(s.description).toBeTruthy();
       expect(['Beginner', 'Intermediate', 'Advanced']).toContain(s.difficulty);
-      expect(s.steps.length).toBeGreaterThan(0);
+      expect(s.estimatedMinutes).toBeGreaterThan(0);
+      expect(s.learningObjectives.length).toBeGreaterThanOrEqual(3);
+      expect(s.concepts.length).toBeGreaterThanOrEqual(3);
+      expect(s.steps.length).toBeGreaterThanOrEqual(8);
 
       for (const step of s.steps) {
         expect(step.command).toBeTruthy();

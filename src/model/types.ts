@@ -124,6 +124,10 @@ export interface Scenario {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   summary: string;
   description: string;
+  estimatedMinutes: number;
+  learningObjectives: string[];
+  concepts: string[];
+  prerequisites?: string[];
   initialFiles?: Record<string, string>;
   steps: ScenarioStep[];
 }
