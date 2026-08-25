@@ -55,6 +55,28 @@ describe('Browser End-to-End Test', () => {
     const commitText = await commitNode.innerText();
     expect(commitText).toContain('initial commit');
 
+    // Theme changes must update xterm in place without erasing scrollback.
+    const terminalRows = page.locator('.xterm-rows');
+    expect(await terminalRows.innerText()).toContain('initial commit');
+    await page.getByTitle('Switch to light mode').click();
+    await page.waitForTimeout(200);
+    expect(await terminalRows.innerText()).toContain('initial commit');
+    expect((await terminalRows.innerText()).match(/CommitFlow Terminal/g)?.length).toBe(1);
+
+    // Reset clears both repository state and terminal state.
+    await page.getByRole('button', { name: /Reset/ }).click();
+    await page.waitForTimeout(300);
+    expect(await page.locator('.react-flow__node').count()).toBe(0);
+    expect(await terminalRows.innerText()).not.toContain('initial commit');
+    expect(await terminalRows.innerText()).toContain('CommitFlow Terminal');
+
+    // insertText sends a complete data chunk, matching browser paste behavior.
+    await terminal.focus();
+    await page.keyboard.insertText('help');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(200);
+    expect(await terminalRows.innerText()).toContain('Filesystem & Utility Commands');
+
     // Switch to Explainer mode
     const explainerBtn = page.getByRole('button', { name: 'Explainer' });
     await explainerBtn.click();

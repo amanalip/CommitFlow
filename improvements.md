@@ -27,14 +27,14 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## P0: Terminal lifecycle and interaction
 
-- [ ] Make repository Reset clear terminal scrollback, input, cursor state, internal command history, pending execution state, and the visible prompt.
-- [ ] Refresh the visible prompt immediately after branch switches and other quick actions initiated outside the terminal.
+- [x] Make repository Reset clear terminal scrollback, input, cursor state, internal command history, pending execution state, and the visible prompt.
+- [x] Refresh the visible prompt immediately after branch switches and other quick actions initiated outside the terminal.
 - [ ] Echo scenario, state-panel, and shared-history commands into the terminal so external actions are visible and understandable.
 - [ ] Render stdout and stderr for commands triggered outside the terminal.
-- [ ] Initialize the xterm instance once instead of recreating it whenever the theme changes.
-- [ ] Preserve scrollback and command history when toggling themes.
-- [ ] Use xterm `onData` for normal text entry, multi-character paste, and composed input.
-- [ ] Reserve `onKey` for navigation and keyboard shortcuts.
+- [x] Initialize the xterm instance once instead of recreating it whenever the theme changes.
+- [x] Preserve scrollback and command history when toggling themes.
+- [x] Use xterm `onData` for normal text entry, multi-character paste, and composed input.
+- [x] Reserve `onKey` for navigation and keyboard shortcuts.
 - [ ] Confirm paste works for multiline and quoted commands, and define whether multiline input is supported or rejected.
 - [ ] Keep the terminal focused after Clear, Reset, scenario steps, and state-panel quick actions when appropriate.
 - [ ] Make the terminal header Clear action behave consistently with the `clear` command and `Ctrl+L`.
@@ -57,14 +57,14 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## P1: Terminal visual treatment
 
-- [ ] Add a terminal background token to both themes.
-- [ ] Assign the terminal background token as a root CSS variable when the theme changes.
-- [ ] Apply the same themed background to the terminal container, wrapper, xterm viewport, screen, and scrollbar.
-- [ ] Remove the thick black gutter caused by the undefined `--bg-terminal` fallback.
-- [ ] Replace the heavy terminal frame with a subtle one-pixel border and a soft shadow.
-- [ ] Keep a small inset around xterm only if the inset matches the terminal background.
-- [ ] Give the terminal header a deliberate surface contrast from the terminal body in both themes.
-- [ ] Restyle the scrollbar to match the selected theme.
+- [x] Add a terminal background token to both themes.
+- [x] Assign the terminal background token as a root CSS variable when the theme changes.
+- [x] Apply the same themed background to the terminal container, wrapper, xterm viewport, screen, and scrollbar.
+- [x] Remove the thick black gutter caused by the undefined `--bg-terminal` fallback.
+- [x] Replace the heavy terminal frame with a subtle one-pixel border and a soft shadow.
+- [x] Keep a small inset around xterm only if the inset matches the terminal background.
+- [x] Give the terminal header a deliberate surface contrast from the terminal body in both themes.
+- [x] Restyle the scrollbar to match the selected theme.
 - [ ] Improve terminal selection colors and cursor visibility in both themes.
 - [ ] Standardize the terminal title, window dots, Clear action, padding, and typography with the rest of the application.
 
@@ -215,8 +215,8 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## Test coverage
 
-- [ ] Test that Reset clears repository state and terminal state together.
-- [ ] Test that theme switching preserves terminal output, history, input, and prompt state.
+- [x] Test that Reset clears repository state and terminal state together.
+- [x] Test that theme switching preserves terminal output, history, input, and prompt state.
 - [ ] Test multi-character paste and quoted command paste in xterm.
 - [ ] Test quick actions while the terminal is focused.
 - [ ] Test per-file Unstage with multiple staged files.

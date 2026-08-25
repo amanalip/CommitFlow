@@ -28,6 +28,7 @@ export function App() {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [lastCommand, setLastCommand] = useState<{ command: string; explanation: string } | null>(null);
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
+  const [terminalResetKey, setTerminalResetKey] = useState<number>(0);
 
   // Scenario state
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
@@ -50,6 +51,8 @@ export function App() {
     root.style.setProperty('--accent-color', theme.accent);
     root.style.setProperty('--node-bg', theme.nodeBg);
     root.style.setProperty('--node-border', theme.nodeBorder);
+    root.style.setProperty('--terminal-bg', theme.terminalBg);
+    root.style.setProperty('--terminal-header-bg', theme.terminalHeader);
     localStorage.setItem('commitflow_theme', themeMode);
   }, [themeMode]);
 
@@ -82,6 +85,7 @@ export function App() {
     setScenarioStepIndex(0);
     setIsPlaying(false);
     isPlayingRef.current = false;
+    setTerminalResetKey((value) => value + 1);
     window.location.hash = '';
   }, []);
 
@@ -228,6 +232,7 @@ export function App() {
                 repoState={repoState}
                 onExecuteCommand={handleExecuteCommand}
                 themeMode={themeMode}
+                resetKey={terminalResetKey}
               />
             </div>
             <div className={styles.statePane}>

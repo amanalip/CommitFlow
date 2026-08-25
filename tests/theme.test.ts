@@ -11,6 +11,10 @@ describe('Theme & Palette Configuration', () => {
 
     expect(THEMES.dark.xterm.background).toBeDefined();
     expect(THEMES.light.xterm.background).toBeDefined();
+    expect(THEMES.dark.terminalBg).toBeDefined();
+    expect(THEMES.light.terminalBg).toBe(THEMES.light.xterm.background);
+    expect(THEMES.dark.terminalHeader).toBeDefined();
+    expect(THEMES.light.terminalHeader).toBeDefined();
   });
 
   it('provides high-contrast lane palette for topological branch rendering', () => {

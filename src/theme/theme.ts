@@ -32,6 +32,8 @@ export const THEMES = {
     nodeBg: '#1e293b',
     nodeBorder: '#475569',
     nodeSelected: '#38bdf8',
+    terminalBg: '#0b1120',
+    terminalHeader: '#172033',
     xterm: {
       background: '#0a0f1d',
       foreground: '#f1f5f9',
@@ -73,6 +75,8 @@ export const THEMES = {
     nodeBg: '#ffffff',
     nodeBorder: '#cbd5e1',
     nodeSelected: '#0284c7',
+    terminalBg: '#f8fafc',
+    terminalHeader: '#ffffff',
     xterm: {
       background: '#f8fafc',
       foreground: '#0f172a',

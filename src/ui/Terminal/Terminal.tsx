@@ -12,9 +12,20 @@ interface TerminalProps {
   repoState: RepoState;
   onExecuteCommand: (command: string) => Promise<CommandResult>;
   themeMode?: ThemeMode;
+  resetKey?: number;
 }
 
-export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: TerminalProps) {
+const WELCOME_LINES = [
+  '\x1b[1;36mCommitFlow Terminal\x1b[0m',
+  '\x1b[90mType "git init" to start or "help" for a list of commands.\x1b[0m',
+];
+
+export function Terminal({
+  repoState,
+  onExecuteCommand,
+  themeMode = 'dark',
+  resetKey = 0,
+}: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermInstance = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -24,6 +35,7 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
   const currentLine = useRef<string>('');
   const cursorPosition = useRef<number>(0);
   const isExecuting = useRef<boolean>(false);
+  const mountedResetKey = useRef<number>(resetKey);
 
   const repoStateRef = useRef<RepoState>(repoState);
   repoStateRef.current = repoState;
@@ -36,241 +48,240 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
     if (!state.initialized) {
       return '\x1b[38;2;148;163;184mcommitflow\x1b[0m \x1b[38;2;56;189;248m$\x1b[0m ';
     }
-    const branchName = state.head.type === 'detached'
-      ? `(${state.head.target})`
-      : `(${state.head.target})`;
-    return `\x1b[38;2;148;163;184mrepo\x1b[0m \x1b[38;2;74;222;128m${branchName}\x1b[0m \x1b[38;2;56;189;248m$\x1b[0m `;
+
+    const branchColor = state.head.type === 'detached' ? '248;113;113' : '74;222;128';
+    const label = state.head.type === 'detached' ? `detached:${state.head.target}` : state.head.target;
+    return `\x1b[38;2;148;163;184mrepo\x1b[0m \x1b[38;2;${branchColor}m(${label})\x1b[0m \x1b[38;2;56;189;248m$\x1b[0m `;
   }, []);
 
-  const writePrompt = useCallback(() => {
-    if (xtermInstance.current) {
-      xtermInstance.current.write(getPrompt());
-      currentLine.current = '';
-      cursorPosition.current = 0;
+  const redrawInput = useCallback(() => {
+    const term = xtermInstance.current;
+    if (!term) return;
+
+    term.write(`\x1b[2K\r${getPrompt()}${currentLine.current}`);
+    const distanceFromEnd = currentLine.current.length - cursorPosition.current;
+    if (distanceFromEnd > 0) {
+      term.write(`\x1b[${distanceFromEnd}D`);
     }
   }, [getPrompt]);
+
+  const writePrompt = useCallback(() => {
+    currentLine.current = '';
+    cursorPosition.current = 0;
+    xtermInstance.current?.write(getPrompt());
+  }, [getPrompt]);
+
+  const writeWelcome = useCallback(() => {
+    const term = xtermInstance.current;
+    if (!term) return;
+    term.writeln(WELCOME_LINES[0]);
+    term.writeln(WELCOME_LINES[1]);
+    term.writeln('');
+    writePrompt();
+  }, [writePrompt]);
 
   const safeFit = useCallback(() => {
     if (!terminalRef.current || !fitAddonRef.current) return;
     const { clientWidth, clientHeight } = terminalRef.current;
-    if (clientWidth > 0 && clientHeight > 0) {
-      try {
-        fitAddonRef.current.fit();
-      } catch {
-        // Ignore fit measurement error
-      }
+    if (clientWidth <= 0 || clientHeight <= 0) return;
+
+    try {
+      fitAddonRef.current.fit();
+    } catch {
+      // The ResizeObserver will try again after layout settles.
     }
   }, []);
+
+  const replaceInput = useCallback((value: string) => {
+    currentLine.current = value;
+    cursorPosition.current = value.length;
+    redrawInput();
+  }, [redrawInput]);
+
+  const insertText = useCallback((value: string) => {
+    if (!value) return;
+    const normalized = value.replace(/\r?\n/g, ' ');
+    const before = currentLine.current.slice(0, cursorPosition.current);
+    const after = currentLine.current.slice(cursorPosition.current);
+    currentLine.current = before + normalized + after;
+    cursorPosition.current += normalized.length;
+    redrawInput();
+  }, [redrawInput]);
+
+  const executeCurrentLine = useCallback(async () => {
+    const term = xtermInstance.current;
+    if (!term || isExecuting.current) return;
+
+    const line = currentLine.current.trim();
+    term.write('\r\n');
+
+    if (!line) {
+      writePrompt();
+      return;
+    }
+
+    commandHistory.current.push(line);
+    historyIndex.current = commandHistory.current.length;
+    isExecuting.current = true;
+
+    try {
+      const result = await onExecuteCommandRef.current(line);
+      if (result.stdout) {
+        term.write(result.stdout.replace(/\n/g, '\r\n') + '\r\n');
+      }
+      if (result.stderr) {
+        term.write(result.stderr.replace(/\n/g, '\r\n') + '\r\n');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      term.write(`\x1b[31m${message}\x1b[0m\r\n`);
+    } finally {
+      isExecuting.current = false;
+      writePrompt();
+    }
+  }, [writePrompt]);
+
+  const completeInput = useCallback(() => {
+    const state = repoStateRef.current;
+    const branchNames = state.branches.map((branch) => branch.name);
+    const fileNames = [
+      ...state.stagedFiles.map((file) => file.path),
+      ...state.unstagedFiles.map((file) => file.path),
+      ...state.untrackedFiles,
+    ];
+    const candidates = getAutocompleteCandidates(currentLine.current, branchNames, fileNames);
+
+    if (candidates.length === 1) {
+      replaceInput(candidates[0]);
+    } else if (candidates.length > 1) {
+      xtermInstance.current?.writeln('\r\n' + candidates.join('   '));
+      redrawInput();
+    }
+  }, [redrawInput, replaceInput]);
+
+  const handleData = useCallback(async (data: string) => {
+    const term = xtermInstance.current;
+    if (!term || isExecuting.current) return;
+
+    switch (data) {
+      case '\r':
+        await executeCurrentLine();
+        return;
+      case '\x7f': {
+        if (cursorPosition.current === 0) return;
+        const before = currentLine.current.slice(0, cursorPosition.current - 1);
+        const after = currentLine.current.slice(cursorPosition.current);
+        currentLine.current = before + after;
+        cursorPosition.current -= 1;
+        redrawInput();
+        return;
+      }
+      case '\x1b[D':
+        if (cursorPosition.current > 0) {
+          cursorPosition.current -= 1;
+          term.write('\x1b[D');
+        }
+        return;
+      case '\x1b[C':
+        if (cursorPosition.current < currentLine.current.length) {
+          cursorPosition.current += 1;
+          term.write('\x1b[C');
+        }
+        return;
+      case '\x1b[A':
+        if (historyIndex.current > 0) {
+          historyIndex.current -= 1;
+          replaceInput(commandHistory.current[historyIndex.current]);
+        }
+        return;
+      case '\x1b[B':
+        if (historyIndex.current < commandHistory.current.length - 1) {
+          historyIndex.current += 1;
+          replaceInput(commandHistory.current[historyIndex.current]);
+        } else if (historyIndex.current === commandHistory.current.length - 1) {
+          historyIndex.current = commandHistory.current.length;
+          replaceInput('');
+        }
+        return;
+      case '\x1b[H':
+      case '\x1b[1~':
+      case '\x01':
+        cursorPosition.current = 0;
+        redrawInput();
+        return;
+      case '\x1b[F':
+      case '\x1b[4~':
+      case '\x05':
+        cursorPosition.current = currentLine.current.length;
+        redrawInput();
+        return;
+      case '\x1b[3~':
+        if (cursorPosition.current < currentLine.current.length) {
+          currentLine.current =
+            currentLine.current.slice(0, cursorPosition.current) +
+            currentLine.current.slice(cursorPosition.current + 1);
+          redrawInput();
+        }
+        return;
+      case '\x03':
+        term.write('^C\r\n');
+        writePrompt();
+        return;
+      case '\x0c':
+        term.write('\x1b[2J\x1b[H');
+        redrawInput();
+        return;
+      case '\x15':
+        currentLine.current = currentLine.current.slice(cursorPosition.current);
+        cursorPosition.current = 0;
+        redrawInput();
+        return;
+      case '\t':
+        completeInput();
+        return;
+      default:
+        if (data.startsWith('\x1b')) return;
+        insertText(data);
+    }
+  }, [completeInput, executeCurrentLine, insertText, redrawInput, replaceInput, writePrompt]);
 
   useEffect(() => {
     if (!terminalRef.current) return;
 
     terminalRef.current.innerHTML = '';
-
-    const termTheme = THEMES[themeMode].xterm;
     const term = new XTerm({
       cursorBlink: true,
-      fontFamily: "'Fira Code', monospace",
+      cursorStyle: 'bar',
+      fontFamily: "'Fira Code', 'SFMono-Regular', Consolas, monospace",
       fontSize: 13,
-      lineHeight: 1.25,
-      theme: termTheme,
+      lineHeight: 1.3,
+      theme: THEMES[themeMode].xterm,
       convertEol: true,
-      allowProposedApi: true,
+      scrollback: 2000,
+      smoothScrollDuration: 100,
     });
-
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(terminalRef.current);
 
     xtermInstance.current = term;
     fitAddonRef.current = fitAddon;
+    writeWelcome();
 
-    term.writeln('\x1b[1;36mCommitFlow Terminal\x1b[0m');
-    term.writeln('\x1b[90mType "git init" to start or "help" for a list of commands.\x1b[0m\n');
-    writePrompt();
-
-    const timer = setTimeout(() => {
-      safeFit();
-    }, 100);
-
-    const handleResize = () => {
-      safeFit();
-    };
-    window.addEventListener('resize', handleResize);
-
-    const resizeObserver = new ResizeObserver(() => {
-      safeFit();
-    });
+    const fitTimer = window.setTimeout(safeFit, 100);
+    const resizeObserver = new ResizeObserver(safeFit);
     resizeObserver.observe(terminalRef.current);
-
-    const disposable = term.onKey(async ({ key, domEvent }) => {
-      if (isExecuting.current) return;
-
-      const keyName = domEvent.key;
-      const isCtrl = domEvent.ctrlKey || domEvent.metaKey;
-
-      // Handle Ctrl+C (Interrupt/Cancel)
-      if (isCtrl && keyName === 'c') {
-        term.write('^C\r\n');
-        writePrompt();
-        return;
-      }
-
-      // Handle Ctrl+L (Clear screen)
-      if (isCtrl && keyName === 'l') {
-        term.clear();
-        term.write(getPrompt() + currentLine.current);
-        return;
-      }
-
-      // Handle Ctrl+U (Erase line before cursor)
-      if (isCtrl && keyName === 'u') {
-        currentLine.current = currentLine.current.slice(cursorPosition.current);
-        cursorPosition.current = 0;
-        term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 50) + '\r' + getPrompt() + currentLine.current);
-        return;
-      }
-
-      // Handle Ctrl+A / Home (Move cursor to start)
-      if ((isCtrl && keyName === 'a') || keyName === 'Home') {
-        if (cursorPosition.current > 0) {
-          term.write('\b'.repeat(cursorPosition.current));
-          cursorPosition.current = 0;
-        }
-        return;
-      }
-
-      // Handle Ctrl+E / End (Move cursor to end)
-      if ((isCtrl && keyName === 'e') || keyName === 'End') {
-        const diff = currentLine.current.length - cursorPosition.current;
-        if (diff > 0) {
-          term.write(currentLine.current.slice(cursorPosition.current));
-          cursorPosition.current = currentLine.current.length;
-        }
-        return;
-      }
-
-      // Handle ArrowLeft
-      if (keyName === 'ArrowLeft') {
-        if (cursorPosition.current > 0) {
-          cursorPosition.current--;
-          term.write('\b');
-        }
-        return;
-      }
-
-      // Handle ArrowRight
-      if (keyName === 'ArrowRight') {
-        if (cursorPosition.current < currentLine.current.length) {
-          term.write(currentLine.current[cursorPosition.current]);
-          cursorPosition.current++;
-        }
-        return;
-      }
-
-      if (keyName === 'Enter') {
-        const line = currentLine.current.trim();
-        term.write('\r\n');
-
-        if (line) {
-          commandHistory.current.push(line);
-          historyIndex.current = commandHistory.current.length;
-          isExecuting.current = true;
-          try {
-            const res = await onExecuteCommandRef.current(line);
-            if (res) {
-              if (res.stdout) {
-                term.write(res.stdout.replace(/\n/g, '\r\n') + '\r\n');
-              }
-              if (res.stderr) {
-                term.write(res.stderr.replace(/\n/g, '\r\n') + '\r\n');
-              }
-            }
-          } catch (err: any) {
-            term.write(`\x1b[31m${err.message || String(err)}\x1b[0m\r\n`);
-          } finally {
-            isExecuting.current = false;
-            writePrompt();
-          }
-        } else {
-          writePrompt();
-        }
-      } else if (keyName === 'Backspace') {
-        if (cursorPosition.current > 0) {
-          const before = currentLine.current.slice(0, cursorPosition.current - 1);
-          const after = currentLine.current.slice(cursorPosition.current);
-          currentLine.current = before + after;
-          cursorPosition.current--;
-
-          term.write('\b' + after + ' ' + '\b'.repeat(after.length + 1));
-        }
-      } else if (keyName === 'ArrowUp') {
-        if (historyIndex.current > 0) {
-          historyIndex.current--;
-          const histCmd = commandHistory.current[historyIndex.current];
-          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 20) + '\r' + getPrompt());
-          term.write(histCmd);
-          currentLine.current = histCmd;
-          cursorPosition.current = histCmd.length;
-        }
-      } else if (keyName === 'ArrowDown') {
-        if (historyIndex.current < commandHistory.current.length - 1) {
-          historyIndex.current++;
-          const histCmd = commandHistory.current[historyIndex.current];
-          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 20) + '\r' + getPrompt());
-          term.write(histCmd);
-          currentLine.current = histCmd;
-          cursorPosition.current = histCmd.length;
-        } else if (historyIndex.current === commandHistory.current.length - 1) {
-          historyIndex.current = commandHistory.current.length;
-          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 20) + '\r' + getPrompt());
-          currentLine.current = '';
-          cursorPosition.current = 0;
-        }
-      } else if (keyName === 'Tab') {
-        domEvent.preventDefault();
-        const state = repoStateRef.current;
-        const branchNames = state.branches.map((b) => b.name);
-        const fileNames = [
-          ...state.stagedFiles.map((f) => f.path),
-          ...state.unstagedFiles.map((f) => f.path),
-          ...state.untrackedFiles,
-        ];
-        const candidates = getAutocompleteCandidates(currentLine.current, branchNames, fileNames);
-        if (candidates.length === 1) {
-          const completed = candidates[0];
-          term.write('\r' + getPrompt() + ' '.repeat(currentLine.current.length + 20) + '\r' + getPrompt());
-          term.write(completed);
-          currentLine.current = completed;
-          cursorPosition.current = completed.length;
-        } else if (candidates.length > 1) {
-          term.writeln('\r\n' + candidates.join('   '));
-          term.write(getPrompt() + currentLine.current);
-        }
-      } else if (key.length === 1 && !domEvent.ctrlKey && !domEvent.altKey && !domEvent.metaKey) {
-        const before = currentLine.current.slice(0, cursorPosition.current);
-        const after = currentLine.current.slice(cursorPosition.current);
-        currentLine.current = before + key + after;
-        cursorPosition.current++;
-
-        term.write(key + after + '\b'.repeat(after.length));
-      }
-    });
+    const dataDisposable = term.onData(handleData);
 
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', handleResize);
+      window.clearTimeout(fitTimer);
       resizeObserver.disconnect();
-      disposable.dispose();
-      try {
-        term.dispose();
-      } catch {
-        // Ignore
-      }
+      dataDisposable.dispose();
+      term.dispose();
       xtermInstance.current = null;
       fitAddonRef.current = null;
     };
-  }, [themeMode, safeFit, getPrompt, writePrompt]);
+  }, [handleData, safeFit, writeWelcome]);
 
   useEffect(() => {
     if (xtermInstance.current) {
@@ -278,26 +289,49 @@ export function Terminal({ repoState, onExecuteCommand, themeMode = 'dark' }: Te
     }
   }, [themeMode]);
 
-  const handleClear = () => {
-    if (xtermInstance.current) {
-      xtermInstance.current.clear();
-      writePrompt();
+  useEffect(() => {
+    if (mountedResetKey.current === resetKey || !xtermInstance.current) return;
+    mountedResetKey.current = resetKey;
+    commandHistory.current = [];
+    historyIndex.current = -1;
+    currentLine.current = '';
+    cursorPosition.current = 0;
+    isExecuting.current = false;
+    xtermInstance.current.clear();
+    xtermInstance.current.write('\x1b[2J\x1b[H');
+    writeWelcome();
+  }, [resetKey, writeWelcome]);
+
+  useEffect(() => {
+    if (!isExecuting.current && xtermInstance.current) {
+      redrawInput();
     }
+  }, [repoState.initialized, repoState.head.type, repoState.head.target, redrawInput]);
+
+  const handleClear = () => {
+    const term = xtermInstance.current;
+    if (!term) return;
+    currentLine.current = '';
+    cursorPosition.current = 0;
+    term.clear();
+    term.write('\x1b[2J\x1b[H');
+    writePrompt();
+    term.focus();
   };
 
   return (
-    <div className={styles.terminalContainer}>
+    <div className={styles.terminalContainer} aria-label="CommitFlow terminal">
       <div className={styles.terminalHeader}>
         <div className={styles.headerLeft}>
-          <div className={styles.windowDots}>
+          <div className={styles.windowDots} aria-hidden="true">
             <span className={`${styles.dot} ${styles.dotRed}`} />
             <span className={`${styles.dot} ${styles.dotYellow}`} />
             <span className={`${styles.dot} ${styles.dotGreen}`} />
           </div>
-          <span className={styles.terminalTitle}>bash - commitflow</span>
+          <span className={styles.terminalTitle}>bash / commitflow</span>
         </div>
         <div className={styles.terminalActions}>
-          <button className={styles.actionButton} onClick={handleClear} title="Clear terminal">
+          <button type="button" className={styles.actionButton} onClick={handleClear}>
             Clear
           </button>
         </div>
