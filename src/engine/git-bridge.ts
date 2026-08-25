@@ -53,7 +53,7 @@ class GitBridge {
           output = await workerEngine.executeRm(payload.files, payload.cached);
           break;
         case 'COMMIT': {
-          const res = await workerEngine.executeCommit(payload.message, payload.allowEmpty);
+          const res = await workerEngine.executeCommit(payload.message, payload.allowEmpty, payload.amend);
           output = res.output;
           extra.sha = res.sha;
           break;
@@ -82,6 +82,15 @@ class GitBridge {
         case 'REVERT':
           output = await workerEngine.executeRevert(payload.commit);
           break;
+        case 'SHOW':
+          output = await workerEngine.executeShow(payload.target);
+          break;
+        case 'DIFF':
+          output = await workerEngine.executeDiff();
+          break;
+        case 'STASH':
+          output = await workerEngine.executeStash(payload.subcommand, payload.message);
+          break;
         case 'WRITE_FILE':
           output = await workerEngine.executeWriteFile(payload.path, payload.content, payload.append);
           break;
@@ -91,6 +100,12 @@ class GitBridge {
         case 'READ_FILE':
           output = await workerEngine.executeReadFile(payload.path);
           break;
+        case 'LS_FILES': {
+          const list = await workerEngine.executeListFiles();
+          extra.files = list;
+          output = list.join('  ');
+          break;
+        }
         case 'RESET_REPO':
           await workerEngine.resetRepository();
           break;

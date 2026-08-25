@@ -128,17 +128,38 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
     };
   }
 
-  if (parsed.type === 'ls') {
-    const files = [...state.stagedFiles, ...state.unstagedFiles].map((f) => f.path);
-    for (const u of state.untrackedFiles) {
-      if (!files.includes(u)) files.push(u);
+  if (parsed.type === 'rm') {
+    if (parsed.args.length === 0) {
+      return {
+        rawCommand: rawInput,
+        stdout: '',
+        stderr: '\x1b[31mrm: missing operand\x1b[0m',
+        exitCode: 1,
+        state,
+      };
     }
+    for (const file of parsed.args) {
+      await gitBridge.send('DELETE_FILE', { path: file });
+    }
+    state = gitBridge.getState();
+    return {
+      rawCommand: rawInput,
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+      state,
+    };
+  }
+
+  if (parsed.type === 'ls') {
+    const res = await gitBridge.send('LS_FILES');
+    const files = (res.extra?.files as string[]) || [];
     return {
       rawCommand: rawInput,
       stdout: files.sort().join('  '),
       stderr: '',
       exitCode: 0,
-      state,
+      state: res.state,
     };
   }
 
@@ -191,6 +212,45 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
     };
   }
 
+  if (parsed.type === 'diff') {
+    const res = await gitBridge.send('DIFF');
+    return {
+      rawCommand: rawInput,
+      stdout: res.output || '',
+      stderr: '',
+      exitCode: 0,
+      explanation: 'Inspected differences in the working tree.',
+      state: res.state,
+    };
+  }
+
+  if (parsed.type === 'show') {
+    const target = parsed.args[0] || 'HEAD';
+    const res = await gitBridge.send('SHOW', { target });
+    return {
+      rawCommand: rawInput,
+      stdout: res.output || '',
+      stderr: res.error ? `\x1b[31m${res.error}\x1b[0m` : '',
+      exitCode: res.success ? 0 : 1,
+      explanation: `Inspected commit object ${target}.`,
+      state: res.state,
+    };
+  }
+
+  if (parsed.type === 'stash') {
+    const sub = parsed.args[0] || (parsed.flags['pop'] ? 'pop' : parsed.flags['list'] ? 'list' : 'push');
+    const msg = parsed.args.slice(1).join(' ') || (typeof parsed.flags['m'] === 'string' ? parsed.flags['m'] : 'WIP');
+    const res = await gitBridge.send('STASH', { subcommand: sub, message: msg });
+    return {
+      rawCommand: rawInput,
+      stdout: res.output || '',
+      stderr: res.error ? `\x1b[31m${res.error}\x1b[0m` : '',
+      exitCode: res.success ? 0 : 1,
+      explanation: sub === 'pop' ? 'Restored stashed changes.' : 'Stashed uncommitted changes.',
+      state: res.state,
+    };
+  }
+
   if (parsed.type === 'add') {
     if (parsed.args.length === 0 && !parsed.flags['A'] && !parsed.flags['all'] && !parsed.flags['a']) {
       return {
@@ -218,7 +278,7 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
     if (!message && parsed.args.length > 0) {
       message = parsed.args.join(' ');
     }
-    if (!message) {
+    if (!message && !parsed.flags['amend']) {
       return {
         rawCommand: rawInput,
         stdout: '',
@@ -229,7 +289,7 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
       };
     }
 
-    if (state.stagedFiles.length === 0 && !parsed.flags['allow-empty']) {
+    if (state.stagedFiles.length === 0 && !parsed.flags['allow-empty'] && !parsed.flags['amend']) {
       return {
         rawCommand: rawInput,
         stdout: 'On branch ' + state.head.target + '\nnothing to commit, working tree clean',
@@ -241,15 +301,16 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
     }
 
     const res = await gitBridge.send('COMMIT', {
-      message,
+      message: message || (state.commits.find((c) => c.isHead)?.message || 'amended commit'),
       allowEmpty: Boolean(parsed.flags['allow-empty']),
+      amend: Boolean(parsed.flags['amend']),
     });
     return {
       rawCommand: rawInput,
       stdout: res.output || '',
       stderr: res.error ? `\x1b[31m${res.error}\x1b[0m` : '',
       exitCode: res.success ? 0 : 1,
-      explanation: `Created new commit "${message}". HEAD and branch pointer advanced.`,
+      explanation: `Created commit "${message}". HEAD and branch pointer advanced.`,
       state: res.state,
     };
   }
@@ -472,7 +533,7 @@ export async function executeCommandLine(rawInput: string): Promise<CommandResul
     if (parsed.flags['soft']) mode = 'soft';
     if (parsed.flags['hard']) mode = 'hard';
 
-    let target = parsed.args[0] || 'HEAD';
+    const target = parsed.args[0] || 'HEAD';
     const res = await gitBridge.send('RESET', { target, mode });
     return {
       rawCommand: rawInput,

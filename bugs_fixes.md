@@ -18,7 +18,7 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
    - *Problem*: Synchronous `fit()` invocations before container layout caused viewport dimension errors.
    - *Fix*: Wrapped resize and initial fit in `safeFit()` checking `clientWidth > 0 && clientHeight > 0` with proper cleanup.
 
-4. **Terminal Key Event Listener Listener Leak & Disposal During Execution**:
+4. **Terminal Key Event Listener Leak & Disposal During Execution**:
    - *Problem*: Re-attaching `term.onKey` on every React state change dropped keystrokes typed during async operations.
    - *Fix*: Stabilized terminal listeners using persistent refs (`repoStateRef`, `onExecuteCommandRef`).
 
@@ -50,6 +50,18 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
     - *Problem*: File appends did not preserve existing content properly in virtual filesystem writes.
     - *Fix*: Read existing file content and appended before writing in `executeWriteFile`.
 
+12. **Missing Implementation for Git Diff & Git Show**:
+    - *Problem*: `git diff` and `git show` were registered as valid commands in parser but threw "Unsupported command" errors.
+    - *Fix*: Implemented `executeDiff` and `executeShow` with color-coded additions, deletions, and metadata formatting.
+
+13. **Missing Implementation for Git Stash & Amend**:
+    - *Problem*: `git stash` and `git commit --amend` were not wired to engine handlers.
+    - *Fix*: Implemented `executeStash` (push, pop, list, clear) and commit amending with parent preservation.
+
+14. **Relative Merge Commit Ref Resolution (`HEAD^2`)**:
+    - *Problem*: Caret refs only matched trailing `^` characters without index numbers, failing on second parent `HEAD^2`.
+    - *Fix*: Added regex resolution for `HEAD^N` targeting specific merge parents.
+
 ---
 
 ## 2. UX and UI Improvements
@@ -69,25 +81,36 @@ This document tracks all verified bug fixes, test expansions, and UI/UX improvem
 13. **Scenario Progress Indicator**: Added step counter and description tracker in the playback controls bar.
 14. **Accessible Color Contrast**: Tuned theme tokens for WCAG AA contrast across terminal text, graph nodes, and badges.
 15. **Clean Working Tree Guidance**: Informative empty states for clean working directories, empty staging areas, and fresh repos.
+16. **GitHub Logo & Navigation Link**: Header includes direct link to source repository.
+17. **Author Copyright Footer**: Added footer with author attribution and license notice.
 
 ---
 
 ## 3. Test Suite Enhancements
 
-- **Tokenizer and Parser Tests**:
+- **Tokenizer and Parser Tests (14 Tests)**:
   - Quoted strings with special characters and semicolons.
   - Boolean flags with follow-up `-m` arguments.
   - Shell redirect commands (`>` and `>>`).
   - Filesystem utilities (`touch`, `cat`, `ls`, `clear`).
   - Branch deletion flags (`-d`, `-D`, `--delete`).
-- **Engine Tests**:
+  - Auto-complete candidate generation.
+- **Engine Tests (9 Tests)**:
+  - Complete git workflow (`init`, `touch`, `add`, `commit`, `branch`, `checkout`, `merge`).
   - Branch deletion flow.
   - Detached HEAD transitions and branch reattachment.
   - Soft, mixed, and hard reset operations.
   - Revert and cherry-pick executions.
+  - Git diff and git show inspect commands.
+  - Git stash push and pop flow.
+  - Git commit amend.
   - Filesystem read, write, and append operations.
-- **Share Codec Tests**:
+- **Share Codec Tests (4 Tests)**:
+  - Compression and decompression integrity.
+  - Empty input handling.
   - Corrupted and malformed hash resilience.
   - Unicode character and emoji handling in commit messages.
-- **Browser End-to-End Tests**:
-  - Full interactive terminal session typing `git init`, file creation, staging, commit, and verifying visual canvas nodes.
+- **Scenario Tests (7 Tests)**:
+  - Automated execution of all 7 bundled learning scenarios.
+- **Browser End-to-End Tests (1 Test)**:
+  - Playwright browser session typing interactive commands, verifying live DOM nodes, mode switching, footer, and repository links.

@@ -13,6 +13,8 @@ let defaultAuthor = {
   email: 'user@commitflow.dev',
 };
 
+let stashList: { id: number; message: string; staged: WorkingFile[]; unstaged: WorkingFile[]; untracked: string[] }[] = [];
+
 export function setAuthor(name: string, email: string) {
   defaultAuthor = { name, email };
 }
@@ -30,9 +32,9 @@ async function isRepoInitialized(): Promise<boolean> {
 
 export async function resolveCommitRef(ref: string): Promise<string> {
   const fs = getFS();
-  const matchTilde = ref.match(/^(.*?)~(\d+)$/);
-  const matchCaret = ref.match(/^(.*?)\^+$/);
 
+  // Handle HEAD~N
+  const matchTilde = ref.match(/^(.*?)~(\d+)$/);
   if (matchTilde) {
     const baseRef = matchTilde[1] || 'HEAD';
     const depth = parseInt(matchTilde[2], 10);
@@ -47,6 +49,21 @@ export async function resolveCommitRef(ref: string): Promise<string> {
     return currentOid;
   }
 
+  // Handle HEAD^N (e.g. HEAD^2 for second parent of merge commit)
+  const matchCaretNum = ref.match(/^(.*?)\^(\d+)$/);
+  if (matchCaretNum) {
+    const baseRef = matchCaretNum[1] || 'HEAD';
+    const parentIndex = parseInt(matchCaretNum[2], 10) - 1;
+    const currentOid = await resolveCommitRef(baseRef);
+    const commit = await git.readCommit({ fs, dir: REPO_DIR, oid: currentOid });
+    if (!commit.commit.parent || commit.commit.parent.length <= parentIndex) {
+      throw new Error(`fatal: reference ${ref} parent ${parentIndex + 1} does not exist`);
+    }
+    return commit.commit.parent[parentIndex];
+  }
+
+  // Handle HEAD^ or HEAD^^
+  const matchCaret = ref.match(/^(.*?)\^+$/);
   if (matchCaret) {
     const baseRef = matchCaret[1] || 'HEAD';
     const carets = ref.length - baseRef.length;
@@ -199,13 +216,9 @@ export async function snapshotRepoState(): Promise<RepoState> {
     }
   }
 
-  // Sort commits topologically: oldest roots first, advancing to newest
   const rawCommits = Array.from(commitMap.values());
-  const commitIndices = new Map<string, number>();
   rawCommits.sort((a, b) => a.author.timestamp - b.author.timestamp);
-  rawCommits.forEach((c, idx) => commitIndices.set(c.oid, idx));
 
-  // Ensure topological parent-before-child ordering
   const sortedCommits: CommitInfo[] = [];
   const visited = new Set<string>();
 
@@ -273,7 +286,7 @@ export async function snapshotRepoState(): Promise<RepoState> {
       }
     }
   } catch {
-    // Empty working directory or uninitialized state
+    // Empty working directory
   }
 
   return {
@@ -289,7 +302,7 @@ export async function snapshotRepoState(): Promise<RepoState> {
     stagedFiles,
     unstagedFiles,
     untrackedFiles,
-    stashes: [],
+    stashes: stashList.map((s, idx) => `stash@{${idx}}: ${s.message}`),
   };
 }
 
@@ -353,19 +366,37 @@ export async function executeRm(filepaths: string[], cached = false): Promise<st
       try {
         await pfs.unlink(`${REPO_DIR}/${cleanFile}`);
       } catch {
-        // File may already be absent
+        // Ignore
       }
     }
   }
   return '';
 }
 
-export async function executeCommit(message: string, _allowEmpty = false): Promise<{ sha: string; output: string }> {
+export async function executeCommit(
+  message: string,
+  _allowEmpty = false,
+  amend = false
+): Promise<{ sha: string; output: string }> {
   const fs = getFS();
+  const pfs = fs.promises;
+
+  let parent: string[] | undefined = undefined;
+  if (amend) {
+    try {
+      const headOid = await resolveCommitRef('HEAD');
+      const headCommit = await git.readCommit({ fs, dir: REPO_DIR, oid: headOid });
+      parent = headCommit.commit.parent;
+    } catch {
+      // First commit
+    }
+  }
+
   const sha = await git.commit({
     fs,
     dir: REPO_DIR,
     message,
+    parent,
     author: defaultAuthor,
     committer: defaultAuthor,
     noUpdateBranch: false,
@@ -377,7 +408,7 @@ export async function executeCommit(message: string, _allowEmpty = false): Promi
     const current = await git.currentBranch({ fs, dir: REPO_DIR });
     if (current) branch = current;
   } catch {
-    // Detached head
+    // Detached
   }
 
   const output = `[${branch} ${shortSha}] ${message}`;
@@ -647,6 +678,108 @@ export async function executeRebase(upstreamBranch: string): Promise<string> {
   return `Successfully rebased and updated refs/heads/${current}.`;
 }
 
+export async function executeShow(commitRef = 'HEAD'): Promise<string> {
+  const fs = getFS();
+  const oid = await resolveCommitRef(commitRef);
+  const commitObj = await git.readCommit({ fs, dir: REPO_DIR, oid });
+  const dateStr = new Date(commitObj.commit.author.timestamp * 1000).toUTCString();
+
+  return [
+    `\x1b[33mcommit ${oid}\x1b[0m`,
+    `Author: ${commitObj.commit.author.name} <${commitObj.commit.author.email}>`,
+    `Date:   ${dateStr}`,
+    `Tree:   ${commitObj.commit.tree}`,
+    '',
+    `    ${commitObj.commit.message}`,
+  ].join('\n');
+}
+
+export async function executeDiff(): Promise<string> {
+  const fs = getFS();
+  const pfs = fs.promises;
+  const matrix = await git.statusMatrix({ fs, dir: REPO_DIR });
+  const diffLines: string[] = [];
+
+  for (const [filepath, headStatus, workdirStatus, stageStatus] of matrix) {
+    if (workdirStatus === 2 && headStatus === 0) {
+      diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
+      diffLines.push(`\x1b[32m+++ b/${filepath} (new file)\x1b[0m`);
+      const content = await readTextFile(pfs, `${REPO_DIR}/${filepath}`);
+      for (const line of content.split('\n')) {
+        if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
+      }
+    } else if (workdirStatus === 2 && headStatus === 1 && stageStatus === 1) {
+      diffLines.push(`\x1b[1mdiff --git a/${filepath} b/${filepath}\x1b[0m`);
+      diffLines.push(`\x1b[33m--- a/${filepath}\x1b[0m`);
+      diffLines.push(`\x1b[32m+++ b/${filepath}\x1b[0m`);
+      const content = await readTextFile(pfs, `${REPO_DIR}/${filepath}`);
+      for (const line of content.split('\n')) {
+        if (line) diffLines.push(`\x1b[32m+ ${line}\x1b[0m`);
+      }
+    }
+  }
+
+  return diffLines.length > 0 ? diffLines.join('\n') : '';
+}
+
+export async function executeStash(subcommand = 'push', message = 'WIP on branch'): Promise<string> {
+  const fs = getFS();
+  const pfs = fs.promises;
+
+  if (subcommand === 'list') {
+    if (stashList.length === 0) return '';
+    return stashList.map((s, i) => `stash@{${i}}: ${s.message}`).join('\n');
+  }
+
+  if (subcommand === 'pop') {
+    if (stashList.length === 0) {
+      throw new Error('No stash entries found.');
+    }
+    const popped = stashList.shift()!;
+    for (const f of popped.staged) {
+      if (f.content !== undefined) {
+        await writeTextFile(pfs, `${REPO_DIR}/${f.path}`, f.content);
+        await git.add({ fs, dir: REPO_DIR, filepath: f.path });
+      }
+    }
+    for (const f of popped.unstaged) {
+      if (f.content !== undefined) {
+        await writeTextFile(pfs, `${REPO_DIR}/${f.path}`, f.content);
+      }
+    }
+    return `Dropped stash@{0} (${popped.message})`;
+  }
+
+  if (subcommand === 'clear') {
+    stashList = [];
+    return '';
+  }
+
+  // Stash push
+  const state = await snapshotRepoState();
+  if (state.stagedFiles.length === 0 && state.unstagedFiles.length === 0 && state.untrackedFiles.length === 0) {
+    return 'No local changes to save';
+  }
+
+  stashList.unshift({
+    id: Date.now(),
+    message: `${state.head.target}: ${message}`,
+    staged: [...state.stagedFiles],
+    unstaged: [...state.unstagedFiles],
+    untracked: [...state.untrackedFiles],
+  });
+
+  // Revert working tree to HEAD
+  try {
+    const headOid = await resolveCommitRef('HEAD');
+    await git.checkout({ fs, dir: REPO_DIR, ref: headOid, force: true });
+  } catch {
+    // Empty repo
+  }
+
+  return `Saved working directory and index state "${message}"`;
+}
+
 export async function executeWriteFile(path: string, content: string, append = false): Promise<string> {
   const fs = getFS();
   const pfs = fs.promises;
@@ -690,5 +823,6 @@ export async function executeListFiles(): Promise<string[]> {
 
 export async function resetRepository(): Promise<RepoState> {
   resetFS();
+  stashList = [];
   return snapshotRepoState();
 }
