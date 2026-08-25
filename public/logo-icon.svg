@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="trunkGrad" x1="8" y1="44" x2="56" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="branchGrad" x1="22" y1="44" x2="54" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#ec4899" />
+    </linearGradient>
+  </defs>
+
+  <!-- Main Trunk Path -->
+  <path d="M 8 44 L 56 44" stroke="url(#trunkGrad)" stroke-width="4" stroke-linecap="round" />
+
+  <!-- Feature Branch Fork & Merge Path -->
+  <path d="M 22 44 C 22 28, 30 20, 38 20 L 44 20 C 50 20, 54 32, 54 44" stroke="url(#branchGrad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Forward Flow Arrow Indicator -->
+  <path d="M 53 40 L 58 44 L 53 48" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Commit Nodes -->
+  <!-- Root Node -->
+  <circle cx="10" cy="44" r="5" fill="#0284c7" stroke="#ffffff" stroke-width="2" />
+  
+  <!-- Fork Node -->
+  <circle cx="22" cy="44" r="5" fill="#0369a1" stroke="#38bdf8" stroke-width="2" />
+  
+  <!-- Feature Branch Node 1 -->
+  <circle cx="38" cy="20" r="5" fill="#9333ea" stroke="#ffffff" stroke-width="2" />
+
+  <!-- Feature Branch Node 2 -->
+  <circle cx="46" cy="20" r="4" fill="#ec4899" stroke="#ffffff" stroke-width="2" />
+
+  <!-- Merge Node -->
+  <circle cx="54" cy="44" r="5.5" fill="#0284c7" stroke="#38bdf8" stroke-width="2.5" />
+</svg>

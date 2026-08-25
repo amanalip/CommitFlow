@@ -42,17 +42,28 @@ export function Header({
       <div className={styles.brandGroup}>
         <svg
           className={styles.logoIcon}
-          viewBox="0 0 24 24"
+          viewBox="0 0 64 64"
           fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         >
-          <circle cx="18" cy="18" r="3" />
-          <circle cx="6" cy="6" r="3" />
-          <path d="M18 15V9a9 9 0 0 0-9-9" />
-          <path d="M6 9a9 9 0 0 0 9 9" />
+          <defs>
+            <linearGradient id="hdrTrunk" x1="8" y1="44" x2="56" y2="44" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#0284c7" />
+              <stop offset="100%" stopColor="#38bdf8" />
+            </linearGradient>
+            <linearGradient id="hdrBranch" x1="22" y1="44" x2="54" y2="20" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#38bdf8" />
+              <stop offset="50%" stopColor="#a855f7" />
+              <stop offset="100%" stopColor="#ec4899" />
+            </linearGradient>
+          </defs>
+          <path d="M 8 44 L 56 44" stroke="url(#hdrTrunk)" strokeWidth="4.5" strokeLinecap="round" />
+          <path d="M 22 44 C 22 26, 30 18, 38 18 L 44 18 C 50 18, 54 30, 54 44" stroke="url(#hdrBranch)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M 53 39 L 58 44 L 53 49" stroke="#38bdf8" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="10" cy="44" r="5" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
+          <circle cx="22" cy="44" r="5" fill="#0369a1" stroke="#38bdf8" strokeWidth="2" />
+          <circle cx="38" cy="18" r="5" fill="#9333ea" stroke="#ffffff" strokeWidth="2" />
+          <circle cx="46" cy="18" r="4" fill="#ec4899" stroke="#ffffff" strokeWidth="2" />
+          <circle cx="54" cy="44" r="5.5" fill="#0284c7" stroke="#38bdf8" strokeWidth="2.5" />
         </svg>
         <span className={styles.brandTitle}>CommitFlow</span>
         <span className={styles.brandTagline}>Watch commits flow</span>

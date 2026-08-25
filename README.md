@@ -1,6 +1,19 @@
-# CommitFlow
+<p align="center">
+  <img src="public/logo.svg" alt="CommitFlow Logo" width="320" />
+</p>
 
-**Watch commits flow.**
+<p align="center">
+  <strong>Watch commits flow.</strong>
+</p>
+
+<p align="center">
+  <a href="https://amanalip.github.io/CommitFlow/">Live Demo</a> •
+  <a href="#features">Features</a> •
+  <a href="#bundled-scenarios">Scenarios</a> •
+  <a href="#local-development">Local Setup</a>
+</p>
+
+---
 
 CommitFlow is an in-browser Git playground that lets you type real git commands and watch the commit graph build in real time. Every command runs against an in-memory Git repository (powered by isomorphic-git and Web Workers). The commit graph, branch pointers, HEAD, staging area, and working directory all update visually after each step.
 
