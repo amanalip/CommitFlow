@@ -16,6 +16,8 @@ import { ExplainerMode } from './ui/ExplainerMode/ExplainerMode';
 
 import styles from './App.module.css';
 
+const SCENARIO_CLOCK_EPOCH = 1_735_689_600;
+
 export function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     return (localStorage.getItem('commitflow_theme') as ThemeMode) || 'dark';
@@ -32,12 +34,15 @@ export function App() {
   const [isExplainerProcessing, setIsExplainerProcessing] = useState<boolean>(false);
   const [isCommandRunning, setIsCommandRunning] = useState<boolean>(false);
   const activeCommandCount = useRef(0);
+  const externalCommandId = useRef(0);
+  const [externalTerminalCommand, setExternalTerminalCommand] = useState<{ id: number; command: string; result: CommandResult } | null>(null);
 
   // Scenario state
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [scenarioStepIndex, setScenarioStepIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1000);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(2000);
+  const [lastScenarioResult, setLastScenarioResult] = useState<CommandResult | null>(null);
   const isPlayingRef = useRef<boolean>(false);
 
   // Apply theme variables to root element
@@ -97,15 +102,29 @@ export function App() {
     setMode(nextMode);
   }, []);
 
+  const handleExternalCommand = useCallback(async (command: string): Promise<CommandResult> => {
+    const result = await handleExecuteCommand(command);
+    externalCommandId.current += 1;
+    setExternalTerminalCommand({ id: externalCommandId.current, command, result });
+    return result;
+  }, [handleExecuteCommand]);
+
+  const setScenarioClock = useCallback(async (stepIndex: number) => {
+    await gitBridge.send('SET_COMMIT_TIME', { timestamp: SCENARIO_CLOCK_EPOCH + stepIndex * 60 });
+  }, []);
+
   const handleResetRepo = useCallback(async () => {
     await gitBridge.send('RESET_REPO');
+    await gitBridge.send('SET_COMMIT_TIME', { timestamp: undefined });
     setCommandHistory([]);
     setLastCommand(null);
     setSelectedScenario(null);
     setScenarioStepIndex(0);
+    setLastScenarioResult(null);
     setIsPlaying(false);
     isPlayingRef.current = false;
     setTerminalResetKey((value) => value + 1);
+    setExternalTerminalCommand(null);
     window.location.hash = '';
   }, []);
 
@@ -115,6 +134,7 @@ export function App() {
       await handleResetRepo();
       setSelectedScenario(scenario);
       setScenarioStepIndex(0);
+      setLastScenarioResult(null);
     },
     [handleResetRepo]
   );
@@ -123,9 +143,13 @@ export function App() {
   const handleScenarioStepForward = useCallback(async () => {
     if (!selectedScenario || scenarioStepIndex >= selectedScenario.steps.length) return;
     const step = selectedScenario.steps[scenarioStepIndex];
-    await handleExecuteCommand(step.command);
-    setScenarioStepIndex((prev) => prev + 1);
-  }, [handleExecuteCommand, scenarioStepIndex, selectedScenario]);
+    await setScenarioClock(scenarioStepIndex);
+    const result = await handleExternalCommand(step.command);
+    setLastScenarioResult(result);
+    if (result.exitCode === 0) {
+      setScenarioStepIndex((prev) => prev + 1);
+    }
+  }, [handleExternalCommand, scenarioStepIndex, selectedScenario, setScenarioClock]);
 
   // Step back in scenario
   const handleScenarioStepBack = useCallback(async () => {
@@ -134,13 +158,17 @@ export function App() {
     await gitBridge.send('RESET_REPO');
     setCommandHistory([]);
 
+    let replayResult: CommandResult | null = null;
     for (let i = 0; i < targetSteps; i++) {
       const step = selectedScenario.steps[i];
-      await executeCommandLine(step.command);
+      await setScenarioClock(i);
+      replayResult = await executeCommandLine(step.command);
+      if (replayResult.exitCode !== 0) break;
       setCommandHistory((prev) => [...prev, step.command]);
     }
+    setLastScenarioResult(replayResult);
     setScenarioStepIndex(targetSteps);
-  }, [scenarioStepIndex, selectedScenario]);
+  }, [scenarioStepIndex, selectedScenario, setScenarioClock]);
 
   // Play / Pause automated sequence
   const handlePlayToggle = useCallback(() => {
@@ -160,8 +188,15 @@ export function App() {
         timer = setTimeout(async () => {
           if (!isPlayingRef.current) return;
           const step = selectedScenario.steps[scenarioStepIndex];
-          await handleExecuteCommand(step.command);
-          setScenarioStepIndex((prev) => prev + 1);
+          await setScenarioClock(scenarioStepIndex);
+          const result = await handleExternalCommand(step.command);
+          setLastScenarioResult(result);
+          if (result.exitCode === 0) {
+            setScenarioStepIndex((prev) => prev + 1);
+          } else {
+            setIsPlaying(false);
+            isPlayingRef.current = false;
+          }
         }, playbackSpeed);
       } else {
         setIsPlaying(false);
@@ -169,7 +204,7 @@ export function App() {
       }
     }
     return () => clearTimeout(timer);
-  }, [isPlaying, scenarioStepIndex, selectedScenario, playbackSpeed, handleExecuteCommand]);
+  }, [isPlaying, scenarioStepIndex, selectedScenario, playbackSpeed, handleExternalCommand, setScenarioClock]);
 
   // Load from URL Hash replay on mount
   useEffect(() => {
@@ -226,7 +261,9 @@ export function App() {
           currentScenario={selectedScenario}
           currentStepIndex={scenarioStepIndex}
           isPlaying={isPlaying}
+          isBusy={isCommandRunning}
           playbackSpeed={playbackSpeed}
+          lastResult={lastScenarioResult}
           onStepBack={handleScenarioStepBack}
           onStepForward={handleScenarioStepForward}
           onPlayToggle={handlePlayToggle}
@@ -257,10 +294,11 @@ export function App() {
                 onExecuteCommand={handleExecuteCommand}
                 themeMode={themeMode}
                 resetKey={terminalResetKey}
+                externalCommand={externalTerminalCommand}
               />
             </div>
             <div className={styles.statePane}>
-              <StatePanel repoState={repoState} onAction={handleExecuteCommand} />
+              <StatePanel repoState={repoState} onAction={handleExternalCommand} />
             </div>
           </div>
         </div>

@@ -1,0 +1,83 @@
+.browser { position: relative; }
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 230px;
+  height: 34px;
+  padding: 0 10px;
+  color: var(--text-color);
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.trigger span:nth-child(2) { flex: 1; text-align: left; }
+.trigger:hover, .triggerOpen { border-color: var(--accent-color); background: var(--bg-tertiary); }
+.trigger:focus-visible, .closeButton:focus-visible, .scenarioCard:focus-visible, .searchBox:focus-within { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+.trigger:disabled { cursor: wait; opacity: 0.55; }
+
+.count {
+  min-width: 23px;
+  padding: 2px 6px;
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+  border-radius: 999px;
+  text-align: center;
+  font-size: 10px;
+}
+
+.popover {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 10px);
+  left: 50%;
+  width: min(760px, calc(100vw - 80px));
+  max-height: min(720px, calc(100vh - 90px));
+  padding: 16px;
+  overflow: hidden;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--bg-secondary) 96%, transparent);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.36);
+  backdrop-filter: blur(18px);
+}
+
+.popoverHeader { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.eyebrow { color: var(--accent-color); font-size: 10px; font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; }
+.heading { margin-top: 3px; color: var(--text-color); font-size: 18px; font-weight: 720; }
+.closeButton { display: grid; place-items: center; width: 30px; height: 30px; color: var(--text-secondary); background: transparent; border: 0; border-radius: 7px; cursor: pointer; }
+.closeButton:hover { color: var(--text-color); background: var(--bg-tertiary); }
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 11px;
+  color: var(--text-muted);
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+}
+.searchBox input { flex: 1; min-width: 0; color: var(--text-color); background: transparent; border: 0; outline: 0; font: inherit; font-size: 12px; }
+.searchBox input::placeholder { color: var(--text-muted); }
+.resultsMeta { margin: 12px 2px 8px; color: var(--text-muted); font-size: 11px; }
+
+.scenarioList { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-height: min(560px, calc(100vh - 225px)); overflow-y: auto; padding: 2px 4px 4px 2px; scrollbar-color: var(--border-color) transparent; }
+.scenarioCard { display: flex; flex-direction: column; align-items: flex-start; min-height: 128px; padding: 12px; color: var(--text-color); background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 10px; cursor: pointer; text-align: left; transition: border-color 120ms ease, transform 120ms ease, background 120ms ease; }
+.scenarioCard:hover { border-color: color-mix(in srgb, var(--accent-color) 65%, var(--border-color)); background: var(--bg-tertiary); transform: translateY(-1px); }
+.selectedCard { border-color: var(--accent-color); box-shadow: inset 3px 0 0 var(--accent-color); }
+.cardTopline { display: flex; align-items: center; width: 100%; gap: 6px; }
+.category, .difficulty { padding: 2px 6px; border-radius: 999px; font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.category { color: var(--accent-color); background: color-mix(in srgb, var(--accent-color) 11%, transparent); }
+.difficulty { color: var(--text-secondary); background: var(--bg-tertiary); }
+.check { margin-left: auto; color: var(--accent-color); }
+.cardTitle { margin-top: 8px; font-size: 13px; font-weight: 700; }
+.cardSummary { display: -webkit-box; margin-top: 5px; overflow: hidden; color: var(--text-secondary); font-size: 11px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.cardMeta { display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 9px; color: var(--text-muted); font-size: 10px; }

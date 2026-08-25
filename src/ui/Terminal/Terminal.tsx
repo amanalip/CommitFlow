@@ -13,6 +13,7 @@ interface TerminalProps {
   onExecuteCommand: (command: string) => Promise<CommandResult>;
   themeMode?: ThemeMode;
   resetKey?: number;
+  externalCommand?: { id: number; command: string; result: CommandResult } | null;
 }
 
 const WELCOME_LINES = [
@@ -25,6 +26,7 @@ export function Terminal({
   onExecuteCommand,
   themeMode = 'dark',
   resetKey = 0,
+  externalCommand = null,
 }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermInstance = useRef<XTerm | null>(null);
@@ -36,6 +38,7 @@ export function Terminal({
   const cursorPosition = useRef<number>(0);
   const isExecuting = useRef<boolean>(false);
   const mountedResetKey = useRef<number>(resetKey);
+  const lastExternalCommandId = useRef(0);
 
   const repoStateRef = useRef<RepoState>(repoState);
   repoStateRef.current = repoState;
@@ -301,6 +304,20 @@ export function Terminal({
     xtermInstance.current.write('\x1b[2J\x1b[H');
     writeWelcome();
   }, [resetKey, writeWelcome]);
+
+  useEffect(() => {
+    const term = xtermInstance.current;
+    if (!externalCommand || !term || externalCommand.id <= lastExternalCommandId.current) return;
+    lastExternalCommandId.current = externalCommand.id;
+    currentLine.current = '';
+    cursorPosition.current = 0;
+    commandHistory.current.push(externalCommand.command);
+    historyIndex.current = commandHistory.current.length;
+    term.write(`\x1b[2K\r${getPrompt()}\x1b[38;2;56;189;248m${externalCommand.command}\x1b[0m\r\n`);
+    if (externalCommand.result.stdout) term.write(`${externalCommand.result.stdout.replace(/\n/g, '\r\n')}\r\n`);
+    if (externalCommand.result.stderr) term.write(`${externalCommand.result.stderr.replace(/\n/g, '\r\n')}\r\n`);
+    writePrompt();
+  }, [externalCommand, getPrompt, writePrompt]);
 
   useEffect(() => {
     if (!isExecuting.current && xtermInstance.current) {

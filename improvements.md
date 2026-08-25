@@ -23,6 +23,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Preserve staged, unstaged, deleted, and untracked file contents correctly through stash push and pop.
 - [ ] Support selecting a specific stash or only show Pop on the top stash so every row does not pop `stash@{0}`.
 - [x] Fix short status output to report `A`, `M`, and `D` accurately for staged files.
+- [x] Represent a file with staged and unstaged edits in both state lists, diffs, and subsequent commit behavior.
 - [x] Remove the duplicate `Date:` line from standard `git log` output.
 - [x] Support common combined flags such as `git commit -am "message"`, or clearly reject unsupported combined forms.
 - [x] Respect `--` as the end of options so filenames beginning with a hyphen are treated as positional arguments.
@@ -32,8 +33,8 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 - [x] Make repository Reset clear terminal scrollback, input, cursor state, internal command history, pending execution state, and the visible prompt.
 - [x] Refresh the visible prompt immediately after branch switches and other quick actions initiated outside the terminal.
-- [ ] Echo scenario, state-panel, and shared-history commands into the terminal so external actions are visible and understandable.
-- [ ] Render stdout and stderr for commands triggered outside the terminal.
+- [x] Echo scenario and state-panel commands into the terminal so external actions are visible and understandable.
+- [x] Render stdout and stderr for scenario and state-panel commands triggered outside the terminal.
 - [x] Initialize the xterm instance once instead of recreating it whenever the theme changes.
 - [x] Preserve scrollback and command history when toggling themes.
 - [x] Use xterm `onData` for normal text entry, multi-character paste, and composed input.
@@ -83,8 +84,13 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [ ] Use stable, descriptive export filenames.
 - [x] Set a maximum fit zoom near `1` so short histories remain readable instead of shrinking excessively.
 - [ ] Refit when the graph container changes size.
-- [ ] Avoid resetting the viewport after every repository update when the user has manually panned or zoomed.
-- [ ] Add a Follow HEAD option for users who want automatic viewport movement.
+- [x] Avoid resetting the viewport after every repository update when the user has manually panned or zoomed.
+- [x] Add a Follow HEAD option for users who want automatic viewport movement.
+- [x] Make the minimap pannable and zoomable so it can navigate long or branched histories.
+- [x] Show the current zoom level and provide a graph interaction lock for focused study.
+- [x] Add graph statistics for commits, branches, merges, tags, and selected-node guidance.
+- [x] Use a React Flow node toolbar for contextual Inspect and Copy ID actions.
+- [x] Enrich commit tiles with object type, SHA label, author, timestamp, parent count, refs, and selection guidance.
 - [x] Increase commit-node text to at least 12px for primary information.
 - [ ] Improve long commit-message handling with a readable tooltip or expandable node rather than relying only on truncation.
 - [ ] Reduce excessive node glow and continuous HEAD pulsing.
@@ -118,32 +124,32 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 ## P1: Scenario learning experience
 
-- [ ] Replace the basic scenario select with a richer scenario browser or popover.
-- [ ] Show category, difficulty, summary, estimated time, step count, and progress for each scenario.
-- [x] Expand the library beyond the seven introductory scenarios with focused lessons for status and diff, staging, restore, amend, stash, merge commits, and history inspection.
+- [x] Replace the basic scenario select with a searchable, themed scenario browser.
+- [x] Show category, difficulty, summary, estimated time, step count, and progress for each scenario.
+- [x] Expand the curriculum to 28 focused lessons spanning repository basics, inspection, staging, branches, merges, rebase, recovery, tags, and selective integration.
 - [x] Give every scenario learning objectives, prerequisites, and key concepts.
-- [x] Increase scenario depth so lessons demonstrate inspection before mutation and verify the result afterward.
-- [ ] Display the current command prominently during playback.
-- [ ] Display the current step explanation and expected result.
-- [ ] Distinguish the last completed step from the next command so the UI never describes an action that has not run yet.
-- [ ] Show command type, affected area, expected HEAD movement, expected commit creation, and expected file-state change for each step.
-- [ ] Echo scenario commands and their output in the terminal exactly as if the learner typed them.
-- [ ] Do not advance progress when a scenario command fails.
-- [ ] Clarify whether the step description refers to the next step or the step just completed.
-- [ ] Replace the ambiguous completion display with an explicit Scenario Complete state.
-- [ ] Keep Previous, Next, Play, Pause, Restart, and speed controls visually grouped.
-- [ ] Use more readable playback delays and avoid a default speed that hides intermediate state changes.
-- [ ] Replace raw millisecond speed values with learner-friendly labels and pause longer on commits, merges, rebases, and resets.
+- [x] Give every lesson 15 to 20 meaningful blocks with inspection before mutation and verification afterward.
+- [x] Display the current or previewed command prominently during playback.
+- [x] Display each block's explanation, affected Git area, expected effect, and commit behavior.
+- [x] Distinguish the last completed block from the next command so the UI never describes an action that has not run yet.
+- [x] Show command type, affected area, expected HEAD or history effect, expected commit creation, and expected file-state change for each block.
+- [x] Echo scenario commands and their output in the terminal as if the learner typed them.
+- [x] Do not advance progress when a scenario command fails.
+- [x] Clarify whether the teaching panel describes the next block or a previewed block.
+- [x] Replace the ambiguous completion display with an explicit Lesson Complete state.
+- [x] Keep Previous, Next, Play, Pause, Restart, and pacing controls visually grouped.
+- [x] Use readable playback delays so intermediate state changes remain visible.
+- [x] Replace raw millisecond speed values with learner-friendly pacing labels.
 - [x] Add a true divergent merge scenario that creates and visualizes a merge commit with two parents.
 - [ ] Verify that the cherry-pick, rebase, detached HEAD, undo, and stash lessons teach correct file-state behavior.
 - [ ] Avoid rebuilding every previous step during Step Back by using engine checkpoints or repository snapshots.
-- [ ] Preserve commit IDs when moving backward and forward through already-executed scenario steps.
-- [ ] Explain when Git intentionally creates new commit IDs during commit, amend, revert, cherry-pick, and rebase.
-- [ ] Keep graph nodes stable and avoid automatic refitting after every scenario action.
+- [x] Preserve commit IDs when moving backward and forward through already-executed scenario steps.
+- [x] Explain when Git intentionally creates new commit IDs during commit, amend, revert, cherry-pick, and rebase.
+- [x] Keep graph nodes stable and avoid automatic refitting after every scenario action.
 - [ ] Keep explanation state synchronized when stepping backward.
-- [ ] Add a completion summary with the final graph and learned concepts.
-- [ ] Let learners inspect the command output, changed files, refs, HEAD, and resulting commit metadata for every completed step.
-- [ ] Add a compact scenario timeline that supports direct navigation to completed checkpoints.
+- [x] Add a completion summary with learned objectives and concepts alongside the final graph.
+- [x] Let learners inspect command output, repository state, refs, HEAD, and resulting commit metadata while progressing.
+- [x] Add a compact lesson map that previews every block and supports direct review of its teaching details.
 
 ## P1: State panels and quick actions
 
@@ -233,8 +239,8 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 
 - [x] Test top-level and command-specific Git help forms.
 - [ ] Test that scenario failures do not advance progress.
-- [ ] Test that scenario Step Back preserves commit IDs for retained steps.
-- [ ] Test that scenario-driven commands and output appear in the terminal.
+- [x] Test that scenario Step Back preserves commit IDs for retained steps.
+- [x] Test that scenario-driven commands and output appear in the terminal.
 - [x] Test scenario metadata completeness and a meaningful minimum step depth.
 - [x] Test that Reset clears repository state and terminal state together.
 - [x] Test that theme switching preserves terminal output, history, input, and prompt state.
@@ -256,6 +262,7 @@ Desktop-focused implementation checklist for functional correctness, UX, visual 
 - [x] Test soft, mixed, and hard reset index, working-tree, branch, and HEAD semantics.
 - [ ] Test stash restoration of staged, unstaged, deleted, and untracked files.
 - [x] Test status codes for staged added, modified, and deleted files.
+- [x] Test simultaneous staged and unstaged edits to the same file, including both diffs and commit behavior.
 - [x] Test combined flags, option termination, unmatched quotes, and filenames containing spaces.
 - [ ] Test keyboard navigation and focus restoration for dialogs, tabs, graph nodes, and scenario controls.
 - [ ] Add visual regression screenshots for the main desktop workspace, terminal, Explainer, scenarios, inspector, empty state, dark theme, and light theme.

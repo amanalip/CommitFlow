@@ -80,6 +80,8 @@
   transition: all 0.15s ease;
 }
 
+.zoomValue { min-width: 38px; color: var(--text-muted); font-family: 'Fira Code', monospace; font-size: 10px; text-align: center; }
+
 .iconButton {
   width: 32px;
   padding: 0;
@@ -145,3 +147,8 @@
   font-size: 11px;
   text-align: right;
 }
+
+.statsPanel { display: flex; align-items: center; gap: 5px; margin: 14px; padding: 5px; color: var(--text-secondary); background: color-mix(in srgb, var(--bg-secondary) 92%, transparent); border: 1px solid var(--border-color); border-radius: 9px; box-shadow: 0 8px 22px rgba(2, 6, 23, 0.16); backdrop-filter: blur(12px); }
+.statsPanel span { padding: 4px 7px; background: var(--bg-tertiary); border-radius: 6px; font-size: 9px; white-space: nowrap; }
+.statsPanel strong { color: var(--text-color); font-size: 10px; }
+.statsPanel .statsHint { color: var(--text-muted); background: transparent; }

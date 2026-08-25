@@ -62,6 +62,9 @@ describe('Browser End-to-End Test', () => {
     expect(await commitNode.isVisible()).toBe(true);
     const commitText = await commitNode.innerText();
     expect(commitText).toContain('initial commit');
+    expect(commitText).toContain('Commit');
+    expect(commitText).toContain('ID');
+    expect(commitText).toContain('Root commit');
 
     const accessibleCommit = page.getByRole('button', { name: /Inspect commit.*initial commit/ });
     await accessibleCommit.focus();
@@ -83,6 +86,25 @@ describe('Browser End-to-End Test', () => {
     expect(await page.locator('.react-flow__node').count()).toBe(0);
     expect(await terminalRows.innerText()).not.toContain('initial commit');
     expect(await terminalRows.innerText()).toContain('CommitFlow Terminal');
+
+    // The learning browser exposes deep lesson metadata and scenario steps echo in the terminal.
+    await page.getByRole('button', { name: /Learning scenarios 28/ }).click();
+    expect(await page.getByRole('dialog', { name: 'Choose a learning scenario' }).isVisible()).toBe(true);
+    expect(await page.getByText('28 lessons available').isVisible()).toBe(true);
+    await page.getByPlaceholder('Search commands, concepts, or difficulty').fill('first repo');
+    await page.getByRole('button', { name: /Your First Repo/ }).click();
+    const lessonControls = page.getByRole('region', { name: /Your First Repo learning controls/ });
+    await lessonControls.waitFor({ state: 'visible' });
+    expect(await lessonControls.isVisible()).toBe(true);
+    expect(await page.getByText(/0 of \d+ complete/).isVisible()).toBe(true);
+    expect(await page.getByText('Lesson map').isVisible()).toBe(true);
+    await page.getByRole('button', { name: 'Run step' }).click();
+    await page.getByText(/1 of \d+ complete/).waitFor({ state: 'visible' });
+    expect(await page.getByText(/1 of \d+ complete/).isVisible()).toBe(true);
+    expect(await terminalRows.innerText()).toContain('git init');
+
+    await page.getByRole('button', { name: /Reset/ }).click();
+    await page.waitForTimeout(200);
 
     // insertText sends a complete data chunk, matching browser paste behavior.
     await terminal.focus();

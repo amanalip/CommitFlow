@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { SCENARIOS } from '../../scenarios/data';
 import { Scenario } from '../../model/types';
 import { ThemeMode } from '../../theme/theme';
+import { ScenarioBrowser } from '../ScenarioBrowser/ScenarioBrowser';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -90,21 +90,11 @@ export function Header({
         </div>
 
         {mode === 'playground' && (
-          <select
-            className={styles.scenarioSelect}
-            value={selectedScenario?.id || ''}
-            onChange={(e) => {
-              const sc = SCENARIOS.find((s) => s.id === e.target.value) || null;
-              onSelectScenario(sc);
-            }}
-          >
-            <option value="">Load Learning Scenario...</option>
-            {SCENARIOS.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title} ({s.difficulty})
-              </option>
-            ))}
-          </select>
+          <ScenarioBrowser
+            selectedScenario={selectedScenario}
+            onSelectScenario={onSelectScenario}
+            disabled={modeChangeDisabled}
+          />
         )}
       </div>
 

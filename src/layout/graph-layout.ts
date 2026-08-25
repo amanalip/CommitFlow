@@ -19,8 +19,8 @@ export interface GraphLayoutResult {
   edges: Edge[];
 }
 
-const COLUMN_SPACING = 200;
-const LANE_SPACING = 110;
+const COLUMN_SPACING = 285;
+const LANE_SPACING = 190;
 const MARGIN_X = 60;
 const MARGIN_Y = 60;
 

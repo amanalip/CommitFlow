@@ -2,18 +2,46 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   background: var(--node-bg, #1e293b);
   border: 2px solid var(--node-border, #475569);
   border-radius: 10px;
-  padding: 10px 14px;
-  min-width: 160px;
-  max-width: 220px;
+  padding: 11px 13px 9px;
+  min-width: 218px;
+  max-width: 250px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
 }
+
+.nodeToolbar {
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.24);
+}
+
+.nodeToolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 29px;
+  padding: 0 8px;
+  color: var(--text-color);
+  background: var(--bg-tertiary);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.nodeToolbar button:hover { border-color: var(--accent-color); }
+.nodeToolbar button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
 
 .nodeCard:hover {
   transform: translateY(-2px);
@@ -35,9 +63,12 @@
 .headerRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 5px;
 }
+
+.typeRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.objectType { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 9px; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+.shaLabel { color: var(--text-muted); font-size: 9px; font-weight: 750; text-transform: uppercase; }
 
 .shaBadge {
   font-family: 'Fira Code', monospace;
@@ -57,7 +88,7 @@
   border-radius: 12px;
   background: #38bdf8;
   color: #0f172a;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.35px;
   animation: pulse 2s infinite;
 }
 
@@ -77,8 +108,8 @@
 }
 
 .message {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 650;
   color: var(--text-color, #f8fafc);
   white-space: nowrap;
   overflow: hidden;
@@ -89,6 +120,9 @@
   font-size: 10px;
   color: var(--text-muted, #94a3b8);
 }
+
+.metaRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 9px; }
+.metaRow span { display: inline-flex; align-items: center; gap: 3px; }
 
 .badgeList {
   display: flex;
@@ -119,6 +153,8 @@
   border: 1px solid #f59e0b;
   color: #fbbf24;
 }
+
+.inspectHint { margin-top: 1px; color: var(--text-muted); font-size: 8px; letter-spacing: 0.02em; text-align: center; opacity: 0.8; }
 
 .handle {
   width: 8px;
